@@ -133,7 +133,8 @@ if prompt := st.chat_input("Reply to Ruby..."):
 # --- VOICE PLAYBACK & DYNAMIC WAIT ---
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    wait = min(len(st.session_state.last_text) / 15, 6)
+    wait = min(len(st.session_state.last_text) / 12, 10)
     time.sleep(wait)
     st.session_state.is_talking = False
     st.rerun()
+
