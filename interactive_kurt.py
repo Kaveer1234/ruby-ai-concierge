@@ -19,7 +19,6 @@ if "brain" not in st.session_state:
 
 st.set_page_config(page_title="Associated Industries", layout="wide")
 
-
 def send_to_office(data, subject):
     url = "https://formspree.io/f/xlgwgpla"
     data["_subject"] = subject
@@ -29,7 +28,6 @@ def send_to_office(data, subject):
         return True
     except:
         return False
-
 
 # --- SIDEBAR UI ---
 with st.sidebar:
@@ -47,8 +45,7 @@ with st.sidebar:
     if st.session_state.quote_step > 0:
         st.divider()
         st.markdown("### 📊 Quote Requirements")
-        st.info(
-            f"Product: {st.session_state.quote_data['Product']}\n\nQty: {st.session_state.quote_data['Quantity']}\n\nColours: {st.session_state.quote_data['Colours']}\n\nBudget: {st.session_state.quote_data['Budget']}")
+        st.info(f"Product: {st.session_state.quote_data['Product']}\n\nQty: {st.session_state.quote_data['Quantity']}\n\nColours: {st.session_state.quote_data['Colours']}\n\nBudget: {st.session_state.quote_data['Budget']}")
 
 # --- MAIN CHAT AREA ---
 st.title("Associated Industries (PTY) Ltd")
@@ -60,13 +57,13 @@ for msg in st.session_state.chat_history:
 if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # --- GLOBAL PATTERN RECOGNITION (Fixes empty Phone field) [cite: 2026-02-12] ---
+    # --- GLOBAL PATTERN RECOGNITION ---
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     garbage = r'(my name is|i am|the company is|we are|is email|is my email|ruby|hi|hello|is my phone|is my name|is name)'
     clean = re.sub(garbage, '', prompt, flags=re.I).strip()
     refusal = any(word in clean.lower() for word in ["don't", "dont", "not", "refuse", "skip", "no", "rather not"])
 
-    # 1. Global Phone & Email Check (Works on every message) [cite: 2026-02-12]
+    # 1. Global Phone & Email Check
     phone_match = re.search(r'(\d{3}\s?\d{3}\s?\d{4}|\d{9,})', prompt)
     if phone_match:
         st.session_state.lead_data["Phone"] = phone_match.group(0)
@@ -75,51 +72,47 @@ if prompt := st.chat_input("Reply to Ruby..."):
     if email_match:
         st.session_state.lead_data["Email"] = email_match.group(0)
 
-    # 2. Contextual Lead Capture (With Field-Lock) [cite: 2026-02-12]
+    # 2. Contextual Lead Capture (With Safety Filter)
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean.title()
     elif "company" in last_ruby and not st.session_state.lead_data["Company"]:
-        st.session_state.lead_data["Company"] = "N/A (Refused)" if refusal else clean.title()
+        # Don't save "quote" as a company name
+        if not any(x in prompt.lower() for x in ["quote", "price", "how much"]):
+            st.session_state.lead_data["Company"] = "N/A (Refused)" if refusal else clean.title()
     elif "phone number" in last_ruby and refusal and not st.session_state.lead_data["Phone"]:
         st.session_state.lead_data["Phone"] = "Refused"
 
-    # 3. Quote Workflow [cite: 2026-02-12]
+    # 3. Quote Workflow
     if any(x in prompt.lower() for x in ["quote", "price", "how much"]) and st.session_state.quote_step == 0:
         st.session_state.quote_step = 1
         answer = f"Certainly {st.session_state.lead_data['Name']}, I can assist with that. Which product are you interested in (M82, Diaries, Gifts, etc.)?"
-
     elif st.session_state.quote_step == 1:
         st.session_state.quote_data["Product"] = clean
         st.session_state.quote_step = 2
         answer = "Great. How many units are you looking to order?"
-
     elif st.session_state.quote_step == 2:
         st.session_state.quote_data["Quantity"] = clean
         st.session_state.quote_step = 3
         answer = "For branding purposes, how many Overprint Colours are required for your logo?"
-
     elif st.session_state.quote_step == 3:
         st.session_state.quote_data["Colours"] = clean
         st.session_state.quote_step = 4
         answer = "Lastly, do you have a total budget in mind? (You can say 'No' if not available)."
-
     elif st.session_state.quote_step == 4:
         st.session_state.quote_data["Budget"] = "N/A" if refusal else clean
         st.session_state.quote_step = 5
         final_data = {**st.session_state.lead_data, **st.session_state.quote_data}
         send_to_office(final_data, "FULL QUOTE REQUEST: " + st.session_state.lead_data["Name"])
         answer = "Perfect! I have sent those details to our sales team. They will be in touch shortly. Is there anything else I can help with?"
-
     else:
         answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
 
-    # Standard update & Voice logic [cite: 2026-02-11]
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # Auto-Discovery Trigger [cite: 2026-02-11]
-    if st.session_state.lead_data["Email"] and not st.session_state.mail_sent:
-        send_to_office(st.session_state.lead_data, "Lead Captured: " + st.session_state.lead_data["Name"])
+    # Lead Auto-Discovery (Sends basic info if they don't finish a quote)
+    if st.session_state.lead_data["Email"] and not st.session_state.mail_sent and st.session_state.quote_step < 5:
+        send_to_office(st.session_state.lead_data, "General Lead Captured: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
 
     tts = gTTS(text=answer, lang='en', tld='co.uk')
