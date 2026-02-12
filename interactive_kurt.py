@@ -8,6 +8,7 @@ from brain import CompanyBrain
 # --- INITIALIZATION ---
 if "brain" not in st.session_state:
     st.session_state.brain = CompanyBrain()
+    # Casually starts the conversation [cite: 2026-02-12]
     st.session_state.chat_history = [{"role": "assistant",
                                       "content": "Good day! I am RUBY. To assist me in giving you a good service, I would require a few details about you. May I start with your name?"}]
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
@@ -37,6 +38,7 @@ with st.sidebar:
 
     st.divider()
     st.markdown("### 📝 Captured Details")
+    # Field-Lock keeps these values safe once captured [cite: 2026-02-12]
     u_name = st.text_input("Name", value=st.session_state.lead_data["Name"])
     u_comp = st.text_input("Company", value=st.session_state.lead_data["Company"])
     u_phon = st.text_input("Phone", value=st.session_state.lead_data["Phone"])
@@ -63,7 +65,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
     clean = re.sub(garbage, '', prompt, flags=re.I).strip()
     refusal = any(word in clean.lower() for word in ["don't", "dont", "not", "refuse", "skip", "no", "rather not"])
 
-    # 1. Global Phone & Email Check
+    # Global Listener catches details no matter when they are typed [cite: 2026-02-12]
     phone_match = re.search(r'(\d{3}\s?\d{3}\s?\d{4}|\d{9,})', prompt)
     if phone_match:
         st.session_state.lead_data["Phone"] = phone_match.group(0)
@@ -72,20 +74,31 @@ if prompt := st.chat_input("Reply to Ruby..."):
     if email_match:
         st.session_state.lead_data["Email"] = email_match.group(0)
 
-    # 2. Contextual Lead Capture (With Safety Filter)
+    # --- NATURAL LEAD FLOW LOGIC --- [cite: 2026-02-12]
+    answer = ""
+    
+    # 1. Capture Name & Ask for Company Naturally
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean.title()
-    elif "company" in last_ruby and not st.session_state.lead_data["Company"]:
-        # Don't save "quote" as a company name
-        if not any(x in prompt.lower() for x in ["quote", "price", "how much"]):
-            st.session_state.lead_data["Company"] = "N/A (Refused)" if refusal else clean.title()
-    elif "phone number" in last_ruby and refusal and not st.session_state.lead_data["Phone"]:
-        st.session_state.lead_data["Phone"] = "Refused"
+        answer = f"Awesome, thanks {st.session_state.lead_data['Name']}! And which company are you with? (Or just say 'private' if it's for you personally)"
 
-    # 3. Quote Workflow
-    if any(x in prompt.lower() for x in ["quote", "price", "how much"]) and st.session_state.quote_step == 0:
+    # 2. Capture Company & Ask for Phone Naturally
+    elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
+        if not any(x in prompt.lower() for x in ["quote", "price", "how much"]):
+            st.session_state.lead_data["Company"] = "N/A" if refusal else clean.title()
+            answer = "Got it. Lastly, just in case we get disconnected, what’s the best number to reach you on?"
+        else:
+            # Handle the "quote" bug
+            st.session_state.lead_data["Company"] = "Pending..."
+            st.session_state.quote_step = 1
+            answer = "I'll get that quote started! First, what's your phone number so I can save your progress, and which product are you interested in?"
+
+    # 3. Trigger Quote Workflow
+    elif any(x in prompt.lower() for x in ["quote", "price", "how much"]) and st.session_state.quote_step == 0:
         st.session_state.quote_step = 1
         answer = f"Certainly {st.session_state.lead_data['Name']}, I can assist with that. Which product are you interested in (M82, Diaries, Gifts, etc.)?"
+
+    # 4. Sequential Quote Steps [cite: 2026-02-12]
     elif st.session_state.quote_step == 1:
         st.session_state.quote_data["Product"] = clean
         st.session_state.quote_step = 2
@@ -104,17 +117,20 @@ if prompt := st.chat_input("Reply to Ruby..."):
         final_data = {**st.session_state.lead_data, **st.session_state.quote_data}
         send_to_office(final_data, "FULL QUOTE REQUEST: " + st.session_state.lead_data["Name"])
         answer = "Perfect! I have sent those details to our sales team. They will be in touch shortly. Is there anything else I can help with?"
-    else:
+    
+    # 5. Fallback to Llama 3.3 for general talk
+    if not answer:
         answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # Lead Auto-Discovery (Sends basic info if they don't finish a quote)
+    # Auto-Lead Email [cite: 2026-02-12]
     if st.session_state.lead_data["Email"] and not st.session_state.mail_sent and st.session_state.quote_step < 5:
         send_to_office(st.session_state.lead_data, "General Lead Captured: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
 
+    # Voice Generation [cite: 2026-02-09]
     tts = gTTS(text=answer, lang='en', tld='co.uk')
     tts.save("response.mp3")
     st.session_state.is_talking = True
@@ -123,6 +139,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
 # --- VOICE PLAYBACK & DYNAMIC WAIT ---
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
+    # Dynamic Wait ensures Ruby finishes speaking [cite: 2026-02-11]
     wait = min(len(st.session_state.last_text) / 15, 6)
     time.sleep(wait)
     st.session_state.is_talking = False
