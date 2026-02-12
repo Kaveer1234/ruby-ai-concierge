@@ -26,11 +26,12 @@ class CompanyBrain:
 
         try:
             response = self.client.chat.completions.create(
-                model="llama3-8b-8192",
+                model="llama-3.3-70b-versatile",
                 messages=messages,
                 temperature=0.7,
                 max_tokens=150
             )
             return response.choices[0].message.content
         except Exception as e:
+
             return f"I encountered an error: {str(e)}"
