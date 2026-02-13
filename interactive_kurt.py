@@ -40,7 +40,7 @@ with st.sidebar:
     video = "kurt_talking.mp4" if st.session_state.is_talking else "kurt_idle.mp4"
     st.video(video, autoplay=True, loop=True, muted=True)
     st.divider()
-    st.markdown("### 📝 Captured Lead")
+    st.markdown("### 📝 Captured Details")
     st.write(f"**Name:** {st.session_state.lead_data['Name']}")
     st.write(f"**Company:** {st.session_state.lead_data['Company']}")
     st.write(f"**Phone:** {st.session_state.lead_data['Phone']}")
@@ -56,7 +56,7 @@ for msg in st.session_state.chat_history:
 if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # Garbage Filter
+    # Garbage Filter logic for names/companies
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     garbage_list = ["my name is", "i am", "the company is", "we are", "ruby", "hi", "hello"]
     clean = prompt.lower()
@@ -64,7 +64,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
         clean = clean.replace(word, "")
     clean = clean.strip().title()
 
-    # Regex Listeners
+    # Regex Listeners for Phone/Email
     phone_match = re.search(r'(\d{3}\s?\d{3}\s?\d{4}|\d{9,})', prompt)
     if phone_match: st.session_state.lead_data["Phone"] = phone_match.group(0)
     
@@ -73,7 +73,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
 
     answer = ""
 
-    # --- LEAD FLOW LOGIC ---
+    # --- 1. LEAD FLOW ---
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean
         answer = f"Awesome, thanks {st.session_state.lead_data['Name']}! And which company are you with?"
@@ -85,10 +85,10 @@ if prompt := st.chat_input("Reply to Ruby..."):
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
         answer = "Perfect. And lastly, what is your work email address? I'll use this to send you our 2026 catalog and any quotes we discuss."
 
-    # --- QUOTE WORKFLOW (STRICT STEPS) ---
+    # --- 2. QUOTE WORKFLOW ---
     elif any(x in prompt.lower() for x in ["quote", "price", "how much"]) and st.session_state.quote_step == 0:
         st.session_state.quote_step = 1
-        answer = f"Certainly {st.session_state.lead_data['Name']}, I can help with a quote. Which product code are you interested in (e.g., M82, Diaries)?"
+        answer = f"Certainly {st.session_state.lead_data['Name']}, I can help with a quote. Which product code or item are you interested in (e.g., M82, Diaries)?"
 
     elif st.session_state.quote_step == 1:
         st.session_state.quote_data["Product"] = prompt
@@ -107,28 +107,30 @@ if prompt := st.chat_input("Reply to Ruby..."):
 
     elif st.session_state.quote_step == 4:
         st.session_state.quote_data["Budget"] = prompt
-        st.session_state.quote_step = 5
         # Send full quote data
         final_data = {**st.session_state.lead_data, **st.session_state.quote_data}
         send_to_office(final_data, "FULL QUOTE: " + st.session_state.lead_data["Name"])
-        answer = "Perfect! I have sent all those details to our sales team. They will be in touch shortly. Is there anything else I can help with?"
+        # RESET logic so she can answer address questions next
+        st.session_state.quote_step = 0 
+        answer = "Perfect! I have sent all those details to our sales team at sales@brabys.co.za. They will be in touch shortly. Is there anything else I can help with today?"
 
-    # --- BRAIN FALLBACK ---
+    # --- 3. BRAIN FALLBACK ---
     if not answer:
         if st.session_state.brain:
+            # If we just captured the email, the very next response should be from the brain
             answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
         else:
-            answer = "I'm here to help! What can I tell you about our wildlife calendars or corporate gifts?"
+            answer = "I'm here to help! What can I tell you about our 2026 range or our branch locations?"
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # Lead Capture Email Trigger
+    # Auto-Email Trigger for Lead Capture (triggered once Email is present)
     if st.session_state.lead_data["Email"] and not st.session_state.mail_sent:
         send_to_office(st.session_state.lead_data, "NEW LEAD: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
 
-    # Voice Cleanup
+    # Voice Cleanup & Playback
     voice_text = re.sub(r'[\*\#\_]', '', answer)
     tts = gTTS(text=voice_text, lang='en', tld='co.uk')
     tts.save("response.mp3")
@@ -138,6 +140,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
 # --- VOICE & VIDEO SYNC ---
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
+    # Calibrated wait time for natural speech finish
     wait_time = (len(st.session_state.last_text) / 9) + 4
     time.sleep(min(wait_time, 22))
     st.session_state.is_talking = False
