@@ -34,56 +34,79 @@ with st.sidebar:
     st.markdown("### Ruby: Digital Concierge")
     video = "kurt_talking.mp4" if st.session_state.is_talking else "kurt_idle.mp4"
     st.video(video, autoplay=True, loop=True, muted=True)
-    st.write(f"**Lead:** {st.session_state.lead_data['Name']}")
+    st.divider()
+    st.write(f"**Chatting with:** {st.session_state.lead_data['Name'] or 'Guest'}")
 
 st.title("Associated Industries (PTY) Ltd")
 chat_box = st.container(height=400)
 for msg in st.session_state.chat_history:
     chat_box.chat_message(msg["role"]).write(msg["content"])
 
-if prompt := st.chat_input("Reply to Ruby..."):
+if prompt := st.chat_input("Message Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     clean = prompt.lower().replace("my name is", "").replace("i am", "").strip().title()
     
-    # Listeners
+    # Listeners for Data
     if re.search(r'\d{9,}', prompt): st.session_state.lead_data["Phone"] = prompt
     if "@" in prompt: st.session_state.lead_data["Email"] = prompt
 
     answer = ""
 
-    # 1. Capture Flow
+    # 1. HUMAN LEAD FLOW
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean
-        answer = f"Awesome, thanks {st.session_state.lead_data['Name']}! And which company are you with?"
+        answer = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
+
     elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
         st.session_state.lead_data["Company"] = clean
-        answer = "Got it. What’s the best number to reach you on?"
+        answer = f"Ah, {clean}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
+
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
-        answer = "Perfect. And lastly, what is your work email address?"
+        answer = "I've got that. And finally, your work email address? I'll use it to send you our 2026 collection."
+
     elif "@" in prompt and not st.session_state.mail_sent:
-        answer = f"Thanks {st.session_state.lead_data['Name']}, I've got everything! How can I help you with our 2026 range or branch details today?"
+        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details safely stored! How can I help you today? I can provide a quote or tell you about our 2026 range."
         send_to_office(st.session_state.lead_data, "NEW LEAD")
         st.session_state.mail_sent = True
 
-    # 2. Quote Logic
+    # 2. SOULFUL QUOTE WORKFLOW
     elif any(x in prompt.lower() for x in ["quote", "price"]) and st.session_state.quote_step == 0:
         st.session_state.quote_step = 1
-        answer = "I can help with that. Which product code (e.g., M82)?"
-    elif st.session_state.quote_step > 0:
-        # (Standard quote steps 1-4 here...)
-        st.session_state.quote_step = 0 # Placeholder for brevity
-        answer = "I've noted those quote details!"
+        answer = "I'd be absolutely delighted to help with a quote! Which specific product or diary code are you interested in?"
 
-    # 3. Brain
+    elif st.session_state.quote_step == 1:
+        st.session_state.quote_data["Product"] = prompt
+        st.session_state.quote_step = 2
+        answer = f"The {prompt}? Excellent choice. How many units were you looking to order for your team?"
+
+    elif st.session_state.quote_step == 2:
+        st.session_state.quote_data["Quantity"] = prompt
+        st.session_state.quote_step = 3
+        answer = f"Got it, {prompt} units. And for the branding, are we looking at a single-color logo or something more vibrant?"
+
+    elif st.session_state.quote_step == 3:
+        st.session_state.quote_data["Colours"] = prompt
+        st.session_state.quote_step = 4
+        answer = "Almost there! Do you have a rough budget in mind? It helps me ensure we give you the best possible value."
+
+    elif st.session_state.quote_step == 4:
+        st.session_state.quote_data["Budget"] = prompt
+        st.session_state.quote_step = 0 # Reset for the Brain to take over
+        send_to_office({**st.session_state.lead_data, **st.session_state.quote_data}, "FULL QUOTE")
+        answer = "Wonderful! I've sent that request over to our specialists. They'll be in touch very soon. Is there anything else you'd like to know, perhaps about our Durban branch?"
+
+    # 3. BRAIN FALLBACK
     if not answer:
         if st.session_state.brain:
             answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
         else:
-            answer = "I'm here! What can I tell you about our calendars?"
+            answer = "I'm right here! Would you like to hear about our 2026 calendars or our branch locations?"
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
+    
+    # Voice Generation (UK English for a more sophisticated concierge feel)
     voice_text = re.sub(r'[\*\#\_]', '', answer)
     gTTS(text=voice_text, lang='en', tld='co.uk').save("response.mp3")
     st.session_state.is_talking = True
@@ -91,6 +114,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
 
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    time.sleep((len(st.session_state.last_text) / 9) + 4)
+    wait_time = (len(st.session_state.last_text) / 9) + 4.5
+    time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
