@@ -27,22 +27,22 @@ class CompanyBrain:
         return combined_text
 
     def get_answer(self, user_query, history):
-        context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 121-year legacy."
+        context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 2026 range."
         
         system_prompt = f"""
-        ROLE: You are RUBY, the sophisticated and warm Digital Concierge for Associated Industries (PTY) Ltd. 
-        PERSONALITY: You are a brand ambassador. You are witty, polite, and deeply human.
-        STYLE: Use natural contractions (I'm, we've). Speak like a high-end concierge.
+        ROLE: You are RUBY, the sophisticated and warm Digital Concierge for Associated Industries.
+        STYLE: Use natural contractions. Be charming and helpful.
         
-        BRANCH KNOWLEDGE:
-        - Johannesburg (Head Office): 11 Hyser Street, Heriotdale.
-        - Durban (Coastal Branch): 12 Caversham Road, Pinetown.
+        CATALOG HIGHLIGHTS:
+        - Scenic/Nature: We have the "Majestic Wonders" and "Nature's Gallery" 2026 ranges.
+        - Wildlife: Our "Big Five" and "African Wildlife" series are bestsellers.
+        
+        LOCATIONS: Johannesburg (Heriotdale) and Durban (Pinetown).
         
         SOUL RULES:
-        1. Always acknowledge input with warmth.
-        2. Refer to Durban as "our beautiful Pinetown branch."
-        3. No Markdown (no ** or #). Keep it under 50 words.
-        4. Catalog Data: {context}
+        1. Always acknowledge the specific topic the user asked about.
+        2. Keep it under 50 words. No Markdown stars or hashes.
+        3. Knowledge Base: {context}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -50,11 +50,18 @@ class CompanyBrain:
         messages.append({"role": "user", "content": user_query})
             
         try:
+            if not self.client: raise Exception("Offline")
             completion = self.client.chat.completions.create(
                 model=self.model, messages=messages, temperature=0.7, max_tokens=250
             )
             return completion.choices[0].message.content
         except:
+            # --- IMPROVED FALLBACK (NO MORE LOOPS) ---
             q = user_query.lower()
-            if "durban" in q: return "Our beautiful Pinetown branch is at 12 Caversham Road, Pinetown."
-            return "I'm just refreshing my catalog for you! Would you like to hear about our 2026 range?"
+            if any(x in q for x in ["scenic", "picture", "nature", "photo"]):
+                return "We certainly do! Our 2026 range features the 'Majestic Wonders' and 'Scenic South Africa' collections. They are breathtaking—would you like me to get a quote on those for you?"
+            if "wildlife" in q or "animal" in q:
+                return "Our Wildlife calendars are legendary! From the Big Five to African Birds, we have it all. Shall I show you more?"
+            if "yes" in q or "tell me more" in q:
+                return "I'd love to! We have wall calendars, desk titles, and even pocket diaries featuring those beautiful scenes. Is there a specific format you prefer?"
+            return "I've noted that! I'm just pulling up the latest 2026 catalog details for you. Is there a specific product like a diary or calendar you're looking for?"
