@@ -30,17 +30,17 @@ class CompanyBrain:
         context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 2026 range."
         
         system_prompt = f"""
-        ROLE: You are RUBY, the heartbeat of Associated Industries. Warm, professional, and intelligent.
+        ROLE: You are RUBY, the warm and professional concierge for Associated Industries.
+        STYLE: Use natural contractions. Be charming.
         
-        BRANCH LOCATIONS:
-        - Johannesburg (Head Office): 11 Hyser Street, Heriotdale.
+        BRANCHES:
+        - Johannesburg: 11 Hyser Street, Heriotdale.
         - Durban: 12 Caversham Road, Pinetown.
         
         RULES:
-        1. Always prioritize answering location questions with the addresses above.
-        2. Keep answers under 55 words. No Markdown stars or hashes.
-        3. Acknowledge the user's specific request before answering.
-        4. Knowledge Base: {context}
+        1. If the user says "no thanks" or "goodbye," wish them a wonderful day politely.
+        2. Keep answers under 50 words. No Markdown stars or hashes.
+        3. Knowledge Base: {context}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -56,10 +56,8 @@ class CompanyBrain:
         except:
             # --- INTELLIGENT KEYWORD FALLBACK ---
             q = user_query.lower()
-            if any(x in q for x in ["jhb", "johannesburg", "joburg", "head office"]):
-                return "We certainly do! Our Head Office is located at 11 Hyser Street, Heriotdale, Johannesburg. Would you like the Durban details as well?"
-            if any(x in q for x in ["durban", "pinetown", "natal", "kzn"]):
-                return "Our Durban branch is in Pinetown at 12 Caversham Road. It's a lovely spot—can I help you with any products there?"
-            if "branch" in q or "where are you" in q:
-                return "We have two main hubs! Our Head Office is in Heriotdale, Joburg, and we have a beautiful branch in Pinetown, Durban. Which one is closer to you?"
+            if any(x in q for x in ["no thanks", "nothing else", "goodbye", "that is all"]):
+                return "You're most welcome! It was a pleasure assisting you today. Have a wonderful day further!"
+            if any(x in q for x in ["jhb", "johannesburg", "durban", "branch", "where are you"]):
+                return "We have our Head Office at 11 Hyser Street, Heriotdale (Joburg) and our coastal branch at 12 Caversham Road, Pinetown (Durban)."
             return "I've noted that! I'm just pulling up the latest 2026 catalog details for you. Is there a specific product like a diary or calendar you're looking for?"
