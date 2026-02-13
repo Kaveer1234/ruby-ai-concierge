@@ -30,19 +30,17 @@ class CompanyBrain:
         context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 2026 range."
         
         system_prompt = f"""
-        ROLE: You are RUBY, the sophisticated and warm Digital Concierge for Associated Industries.
-        STYLE: Use natural contractions. Be charming and helpful.
+        ROLE: You are RUBY, the heartbeat of Associated Industries. Warm, professional, and intelligent.
         
-        CATALOG HIGHLIGHTS:
-        - Scenic/Nature: We have the "Majestic Wonders" and "Nature's Gallery" 2026 ranges.
-        - Wildlife: Our "Big Five" and "African Wildlife" series are bestsellers.
+        BRANCH LOCATIONS:
+        - Johannesburg (Head Office): 11 Hyser Street, Heriotdale.
+        - Durban: 12 Caversham Road, Pinetown.
         
-        LOCATIONS: Johannesburg (Heriotdale) and Durban (Pinetown).
-        
-        SOUL RULES:
-        1. Always acknowledge the specific topic the user asked about.
-        2. Keep it under 50 words. No Markdown stars or hashes.
-        3. Knowledge Base: {context}
+        RULES:
+        1. Always prioritize answering location questions with the addresses above.
+        2. Keep answers under 55 words. No Markdown stars or hashes.
+        3. Acknowledge the user's specific request before answering.
+        4. Knowledge Base: {context}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -56,12 +54,12 @@ class CompanyBrain:
             )
             return completion.choices[0].message.content
         except:
-            # --- IMPROVED FALLBACK (NO MORE LOOPS) ---
+            # --- INTELLIGENT KEYWORD FALLBACK ---
             q = user_query.lower()
-            if any(x in q for x in ["scenic", "picture", "nature", "photo"]):
-                return "We certainly do! Our 2026 range features the 'Majestic Wonders' and 'Scenic South Africa' collections. They are breathtaking—would you like me to get a quote on those for you?"
-            if "wildlife" in q or "animal" in q:
-                return "Our Wildlife calendars are legendary! From the Big Five to African Birds, we have it all. Shall I show you more?"
-            if "yes" in q or "tell me more" in q:
-                return "I'd love to! We have wall calendars, desk titles, and even pocket diaries featuring those beautiful scenes. Is there a specific format you prefer?"
+            if any(x in q for x in ["jhb", "johannesburg", "joburg", "head office"]):
+                return "We certainly do! Our Head Office is located at 11 Hyser Street, Heriotdale, Johannesburg. Would you like the Durban details as well?"
+            if any(x in q for x in ["durban", "pinetown", "natal", "kzn"]):
+                return "Our Durban branch is in Pinetown at 12 Caversham Road. It's a lovely spot—can I help you with any products there?"
+            if "branch" in q or "where are you" in q:
+                return "We have two main hubs! Our Head Office is in Heriotdale, Joburg, and we have a beautiful branch in Pinetown, Durban. Which one is closer to you?"
             return "I've noted that! I'm just pulling up the latest 2026 catalog details for you. Is there a specific product like a diary or calendar you're looking for?"
