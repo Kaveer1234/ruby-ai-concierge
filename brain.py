@@ -2,6 +2,9 @@ import os
 import PyPDF2
 from groq import Groq
 
+# Safety Check for the main script
+__all__ = ['CompanyBrain']
+
 class CompanyBrain:
     def __init__(self):
         # Initialize Groq with safety check
@@ -9,6 +12,7 @@ class CompanyBrain:
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
         
+        # Library setup - matching your uploaded compressed files
         self.library_files = [
             "library/Part1_compressed.pdf",
             "library/Part2_compressed.pdf",
@@ -18,7 +22,7 @@ class CompanyBrain:
         self.knowledge_base = self._load_library()
 
     def _load_library(self):
-        """Reads the PDFs from the library folder."""
+        """Reads the PDFs from the library folder for catalog knowledge."""
         combined_text = ""
         for file_path in self.library_files:
             if os.path.exists(file_path):
@@ -26,40 +30,45 @@ class CompanyBrain:
                     with open(file_path, "rb") as f:
                         reader = PyPDF2.PdfReader(f)
                         for page in reader.pages:
-                            t = page.extract_text()
-                            if t: combined_text += t + "\n"
+                            text = page.extract_text()
+                            if text:
+                                combined_text += text + "\n"
                 except Exception as e:
-                    print(f"Error loading {file_path}: {e}")
+                    print(f"Librarian Error reading {file_path}: {e}")
         return combined_text
 
     def get_answer(self, user_query, history):
-        """This function must be indented inside the CompanyBrain class!"""
-        context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2026 range."
+        """Processes the query using PDF context and the Official Branch details."""
+        # Balanced context window to provide facts without crashing the voice engine
+        context = self.knowledge_base[:10000] if self.knowledge_base else "Associated Industries 2026 range."
         
         system_prompt = f"""
         ROLE:
-        You are RUBY, the charismatic and sophisticated Digital Concierge for Associated Industries (PTY) Ltd. 
-        You are professional, intelligent, and warm.
-        
-        TRUTH & ACCURACY:
-        - Use ONLY the provided CATALOG DATA for product facts.
-        - NO MONKEYS: We do not have monkey themes. If asked, pivot to Wildlife (The Big Five) or Nature themes.
-        - If the info isn't in the data, offer to have a human specialist contact them.
+        You are RUBY, the charismatic and intelligent Digital Concierge for Associated Industries (PTY) Ltd.
+        You represent a 121-year-old legacy. Be professional and warm.
 
-        VOICE OPTIMIZATION (CRITICAL):
-        - Keep responses short (under 75 words) to prevent voice cut-offs.
-        - Do not use special characters or complex Markdown.
-        - Speak clearly and finish every sentence.
+        OFFICIAL BRANCH LOCATIONS:
+        - JOHANNESBURG (Head Office): 11 Hyser Street, Heriotdale, Johannesburg.
+        - DURBAN BRANCH: 12 Caversham Road, Pinetown, Durban.
+
+        TRUTH & VOICE RULES (CRITICAL):
+        1. NO HALLUCINATIONS: Use ONLY the CATALOG DATA for product facts.
+        2. ADDRESSES: Use the specific addresses above for any location questions.
+        3. NO MONKEYS: We do not have monkey themes. Pivot to Wildlife (The Big Five) or Nature if asked.
+        4. VOICE SAVER: Keep responses under 75 words. Use short sentences so the voice engine doesn't cut off.
+        5. NO MARKDOWN: Do not use stars (**) or hashes (#) in your speech.
+        6. DYNAMIC LEADS: Accept whatever Name, Company, or Email the user provides. Never correct the user's email.
 
         OFFICIAL CONTACTS:
         - Email: sales@brabys.co.za
         - Phone: 011 621 4130
 
-        CATALOG DATA:
+        CATALOG DATA (SOURCE OF TRUTH):
         {context}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
+        # Include recent history for flow
         for msg in history[-5:]:
             messages.append(msg)
         
@@ -73,11 +82,10 @@ class CompanyBrain:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=0.7, # Balanced for 'Soul' and facts
-                max_tokens=300,  # Short and sweet for the voice engine
+                temperature=0.7, 
+                max_tokens=350, 
                 top_p=0.9
             )
             return completion.choices[0].message.content
         except Exception as e:
-            print(f"Groq Error: {e}")
-            return "I apologize, I'm just refreshing my catalog memory. What can I find for you in our 2026 range?"
+            return "I apologize, I'm just refreshing my records. We have branches in Heriotdale and Pinetown—how can I help you today?"
