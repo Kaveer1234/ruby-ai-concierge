@@ -7,7 +7,7 @@ class CompanyBrain:
         self.client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
         self.model = "llama-3.3-70b-versatile"
         
-        # EXACT matches for the files you just moved into /library
+        # EXACT matches for your library files
         self.library_files = [
             "library/Part1_compressed.pdf",
             "library/Part2_compressed.pdf",
@@ -32,8 +32,8 @@ class CompanyBrain:
         return combined_text
 
     def get_answer(self, user_query, history):
-        # We give Ruby the first 9000 characters of catalog data for context
-        context = self.knowledge_base[:9000] if self.knowledge_base else "Associated Industries specialist."
+        # Using a generous slice of the library for context
+        context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries specialist."
         
         system_prompt = f"""
         You are RUBY, the Digital Concierge for Associated Industries (PTY) Ltd.
@@ -41,11 +41,12 @@ class CompanyBrain:
         OUR 2026 CATALOG DATA:
         {context}
         
-        RULES:
-        1. If asked about product specs, use the catalog data (e.g. M82 is 440mm x 580mm).
-        2. If info is missing, say 'I will confirm that with our production team'.
-        3. Maintain a professional South African tone.
-        4. Capture customer contact info (Email/Phone) for any quote requests.
+        GOLD STANDARD RULES:
+        1. Always finish your sentence and complete your thought.
+        2. Use specific data (e.g., M82A ad copy is 100mm x 210mm).
+        3. If a list is long, provide it clearly but concisely.
+        4. Capture customer contact info (Email/Phone) for all leads.
+        5. Tone: Professional South African Sales Executive.
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -56,9 +57,9 @@ class CompanyBrain:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=0.4,
-                max_tokens=500
+                temperature=0.3, # Keeps her factual and concise
+                max_tokens=1000  # Large enough to prevent cut-offs
             )
             return completion.choices[0].message.content
-        except:
-            return "I am currently refreshing my catalog knowledge. How can I help you in the meantime?"
+        except Exception as e:
+            return "I am currently processing that request. May I have your email address while I pull up those specific details for you?"
