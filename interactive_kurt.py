@@ -29,7 +29,7 @@ def send_to_office(data, subject):
     try: requests.post(url, data=data, timeout=8)
     except: pass
 
-# --- SIDEBAR ---
+# --- UI ---
 with st.sidebar:
     st.markdown("### Ruby: Digital Concierge")
     video = "kurt_talking.mp4" if st.session_state.is_talking else "kurt_idle.mp4"
@@ -46,10 +46,8 @@ if prompt := st.chat_input("Message Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     
-# --- INTELLIGENT CLEANING ---
+    # Cleaning Greetings
     clean = prompt.lower()
-    # We only want to clean greetings when capturing the NAME. 
-    # If the user says "Yes", we shouldn't strip it.
     if "your name" in last_ruby:
         for word in ["hi", "hello", "my name is", "i am"]:
             clean = clean.replace(word, "")
@@ -71,7 +69,7 @@ if prompt := st.chat_input("Message Ruby..."):
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
         answer = "I've got that. And finally, your work email address? I'll use it for your catalog and quotes."
     elif "@" in prompt and not st.session_state.mail_sent:
-        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details safely stored! How can I help you today? I can provide a quote or tell you about our 2026 range."
+        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details safely stored! How can I help you today?"
         send_to_office(st.session_state.lead_data, "NEW LEAD: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
 
@@ -86,7 +84,7 @@ if prompt := st.chat_input("Message Ruby..."):
     elif st.session_state.quote_step == 2:
         st.session_state.quote_data["Quantity"] = prompt
         st.session_state.quote_step = 3
-        answer = f"Got it, {prompt} units. For the branding, are we looking at a single-color logo or something more vibrant?"
+        answer = f"Got it, {prompt} units. For the branding, are we looking at a single-color logo or something more vibrant like foiling?"
     elif st.session_state.quote_step == 3:
         st.session_state.quote_data["Colours"] = prompt
         st.session_state.quote_step = 4
@@ -95,7 +93,7 @@ if prompt := st.chat_input("Message Ruby..."):
         st.session_state.quote_data["Budget"] = prompt
         st.session_state.quote_step = 0
         send_to_office({**st.session_state.lead_data, **st.session_state.quote_data}, "FULL QUOTE: " + st.session_state.lead_data["Name"])
-        answer = "Wonderful! I've sent that request to our specialists. Is there anything else I can assist with?"
+        answer = "Wonderful! I've sent that request to our specialists. Is there anything else I can assist with, perhaps our branch locations?"
 
     # 3. Brain
     if not answer:
@@ -106,13 +104,17 @@ if prompt := st.chat_input("Message Ruby..."):
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
-    gTTS(text=re.sub(r'[\*\#\_]', '', answer), lang='en', tld='co.uk').save("response.mp3")
+    
+    # Voice Gen
+    voice_text = re.sub(r'[\*\#\_]', '', answer)
+    gTTS(text=voice_text, lang='en', tld='co.uk').save("response.mp3")
     st.session_state.is_talking = True
     st.rerun()
 
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    time.sleep((len(st.session_state.last_text) / 9) + 4.5)
+    # GOLD STANDARD DYNAMIC WAIT [cite: 2026-02-11]
+    wait_time = (len(st.session_state.last_text) / 9) + 4.5
+    time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
-
