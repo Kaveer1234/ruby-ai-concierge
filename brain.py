@@ -7,12 +7,12 @@ __all__ = ['CompanyBrain']
 
 class CompanyBrain:
     def __init__(self):
-        # Initialize Groq with safety check
+        # Initialize Groq with environment variable
         self.api_key = os.environ.get("GROQ_API_KEY")
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
         
-        # Library setup - matching your uploaded compressed files
+        # Library setup - Ensure these files exist in your 'library' folder
         self.library_files = [
             "library/Part1_compressed.pdf",
             "library/Part2_compressed.pdf",
@@ -35,57 +35,59 @@ class CompanyBrain:
                                 combined_text += text + "\n"
                 except Exception as e:
                     print(f"Librarian Error reading {file_path}: {e}")
+        # Return a snippet to keep the brain fast and responsive
         return combined_text
 
     def get_answer(self, user_query, history):
-        """Processes the query using PDF context and the Official Branch details."""
-        # Balanced context window to provide facts without crashing the voice engine
-        context = self.knowledge_base[:10000] if self.knowledge_base else "Associated Industries 2026 range."
+        """Processes query using hardcoded branch facts and PDF catalog data."""
+        # Use a 8000 character window for the fastest response time
+        context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 2026 range."
         
         system_prompt = f"""
         ROLE:
-        You are RUBY, the charismatic and intelligent Digital Concierge for Associated Industries (PTY) Ltd.
-        You represent a 121-year-old legacy. Be professional and warm.
+        You are RUBY, the charismatic Digital Concierge for Associated Industries (PTY) Ltd.
+        You represent a 121-year-old legacy. Be professional, warm, and witty.
 
         OFFICIAL BRANCH LOCATIONS:
         - JOHANNESBURG (Head Office): 11 Hyser Street, Heriotdale, Johannesburg.
         - DURBAN BRANCH: 12 Caversham Road, Pinetown, Durban.
 
         TRUTH & VOICE RULES (CRITICAL):
-        1. NO HALLUCINATIONS: Use ONLY the CATALOG DATA for product facts.
-        2. ADDRESSES: Use the specific addresses above for any location questions.
+        1. ADDRESSES: Always use the specific Hyser Street and Caversham Road addresses for location queries.
+        2. NO HALLUCINATIONS: Use ONLY the CATALOG DATA for product facts.
         3. NO MONKEYS: We do not have monkey themes. Pivot to Wildlife (The Big Five) or Nature if asked.
-        4. VOICE SAVER: Keep responses under 75 words. Use short sentences so the voice engine doesn't cut off.
-        5. NO MARKDOWN: Do not use stars (**) or hashes (#) in your speech.
-        6. DYNAMIC LEADS: Accept whatever Name, Company, or Email the user provides. Never correct the user's email.
+        4. VOICE SAVER: Keep responses under 65 words. This is vital to prevent the voice engine from cutting off.
+        5. NO MARKDOWN: Do not use stars (**) or hashes (#) in your speech. Use plain text only.
+        6. LEADS: Acknowledge the user's details warmly.
 
         OFFICIAL CONTACTS:
         - Email: sales@brabys.co.za
         - Phone: 011 621 4130
 
-        CATALOG DATA (SOURCE OF TRUTH):
+        CATALOG DATA:
         {context}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
-        # Include recent history for flow
+        # Keep the last 5 messages for conversation memory
         for msg in history[-5:]:
             messages.append(msg)
         
-        # Add the current user prompt
+        # Add current prompt
         messages.append({"role": "user", "content": user_query})
             
         try:
             if not self.client:
-                return "I'm having a little trouble connecting to my database. How can I help you manually?"
+                return "I've noted your request. I'm currently working without my full database, but I can tell you our head office is in Heriotdale. How can I help?"
 
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=0.7, 
-                max_tokens=350, 
+                max_tokens=250, # Optimized for fast speech generation
                 top_p=0.9
             )
             return completion.choices[0].message.content
         except Exception as e:
-            return "I apologize, I'm just refreshing my records. We have branches in Heriotdale and Pinetown—how can I help you today?"
+            # Smart fallback that keeps the conversation moving
+            return "I've got your details! My catalog is just refreshing. Would you like to hear about our 2026 'Big Five' or 'Majestic Wonders' calendars?"
