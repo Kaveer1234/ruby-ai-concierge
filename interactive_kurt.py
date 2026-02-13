@@ -63,7 +63,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
     clean = re.sub(garbage, '', prompt, flags=re.I).strip()
     refusal = any(word in clean.lower() for word in ["don't", "dont", "not", "refuse", "skip", "no", "rather not"])
 
-    # Global Listener [cite: 2026-02-12]
+    # Global Listener
     phone_match = re.search(r'(\d{3}\s?\d{3}\s?\d{4}|\d{9,})', prompt)
     if phone_match:
         st.session_state.lead_data["Phone"] = phone_match.group(0)
@@ -72,29 +72,30 @@ if prompt := st.chat_input("Reply to Ruby..."):
     if email_match:
         st.session_state.lead_data["Email"] = email_match.group(0)
 
-    # --- NATURAL LEAD FLOW LOGIC --- [cite: 2026-02-12]
+    # --- NATURAL LEAD FLOW --- [cite: 2026-02-12]
     answer = ""
     
-    # 1. Name -> Company
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean.title()
         answer = f"Awesome, thanks {st.session_state.lead_data['Name']}! And which company are you with?"
 
-    # 2. Company -> Phone
     elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
-        st.session_state.lead_data["Company"] = "N/A" if refusal else clean.title()
-        answer = "Got it. Just in case we get disconnected, what’s the best number to reach you on?"
+        if not any(x in prompt.lower() for x in ["quote", "price", "how much"]):
+            st.session_state.lead_data["Company"] = "N/A" if refusal else clean.title()
+            answer = "Got it. Just in case we get disconnected, what’s the best number to reach you on?"
+        else:
+            st.session_state.lead_data["Company"] = "Pending..."
+            st.session_state.quote_step = 1
+            answer = "I'll get that quote started! First, what's your phone number and which product are you interested in?"
 
-    # 3. Phone -> Email [cite: 2026-02-12]
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
         answer = "Perfect. And lastly, what is your work email address? I'll use this to send you any catalogs or quotes we discuss."
 
-    # 4. Trigger Quote
+    # --- QUOTE WORKFLOW --- [cite: 2026-02-12]
     elif any(x in prompt.lower() for x in ["quote", "price", "how much"]) and st.session_state.quote_step == 0:
         st.session_state.quote_step = 1
         answer = f"Certainly {st.session_state.lead_data['Name']}, I can assist with that. Which product are you interested in (M82, Diaries, Gifts, etc.)?"
 
-    # 5. Quote Steps
     elif st.session_state.quote_step == 1:
         st.session_state.quote_data["Product"] = clean
         st.session_state.quote_step = 2
@@ -102,7 +103,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
     elif st.session_state.quote_step == 2:
         st.session_state.quote_data["Quantity"] = clean
         st.session_state.quote_step = 3
-        answer = "For branding purposes, how many Overprint Colours are required for your logo?"
+        answer = "For branding purposes, What Overprint Colours are required for your logo?"
     elif st.session_state.quote_step == 3:
         st.session_state.quote_data["Colours"] = clean
         st.session_state.quote_step = 4
@@ -110,9 +111,14 @@ if prompt := st.chat_input("Reply to Ruby..."):
     elif st.session_state.quote_step == 4:
         st.session_state.quote_data["Budget"] = "N/A" if refusal else clean
         st.session_state.quote_step = 5
+        
+        # FIXED: Pull Name correctly for recap
+        display_name = st.session_state.lead_data["Name"] if st.session_state.lead_data["Name"] else "Not provided"
+        
         final_data = {**st.session_state.lead_data, **st.session_state.quote_data}
-        send_to_office(final_data, "FULL QUOTE REQUEST: " + st.session_state.lead_data["Name"])
-        answer = "Perfect! I have sent those details to our sales team. They will be in touch shortly. Is there anything else I can help with?"
+        send_to_office(final_data, "FULL QUOTE REQUEST: " + display_name)
+        
+        answer = f"Perfect! I've made a note of your details:\n\nName: {display_name}\nPhone: {st.session_state.lead_data['Phone']}\nEmail: {st.session_state.lead_data['Email']}\n\nI have sent those details to our sales team. Is there anything else I can help with today?"
     
     if not answer:
         answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
@@ -120,7 +126,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # Auto-Lead Email Trigger [cite: 2026-02-12]
+    # Lead Auto-Email [cite: 2026-02-12]
     if st.session_state.lead_data["Email"] and not st.session_state.mail_sent and st.session_state.quote_step < 5:
         send_to_office(st.session_state.lead_data, "General Lead Captured: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
@@ -133,8 +139,8 @@ if prompt := st.chat_input("Reply to Ruby..."):
 # --- VOICE PLAYBACK & DYNAMIC WAIT ---
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    wait = min(len(st.session_state.last_text) / 12, 10)
-    time.sleep(wait)
+    # UPDATED TIMING: Slower multiplier + 2 second buffer [cite: 2026-02-11]
+    wait = (len(st.session_state.last_text) / 12) + 2
+    time.sleep(min(wait, 12)) 
     st.session_state.is_talking = False
     st.rerun()
-
