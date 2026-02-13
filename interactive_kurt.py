@@ -46,10 +46,13 @@ if prompt := st.chat_input("Message Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     
-    # --- INTELLIGENT CLEANING ---
+# --- INTELLIGENT CLEANING ---
     clean = prompt.lower()
-    for word in ["hi", "hello", "hey", "good day", "my name is", "i am", "representing", "the company is"]:
-        clean = clean.replace(word, "")
+    # We only want to clean greetings when capturing the NAME. 
+    # If the user says "Yes", we shouldn't strip it.
+    if "your name" in last_ruby:
+        for word in ["hi", "hello", "my name is", "i am"]:
+            clean = clean.replace(word, "")
     clean = clean.strip().title()
     
     # Listeners
@@ -112,3 +115,4 @@ if st.session_state.is_talking:
     time.sleep((len(st.session_state.last_text) / 9) + 4.5)
     st.session_state.is_talking = False
     st.rerun()
+
