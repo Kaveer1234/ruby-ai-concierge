@@ -3,11 +3,16 @@ import time
 import requests
 import re
 from gtts import gTTS
-from brain import CompanyBrain
 
-# --- INITIALIZATION ---
+# --- ROBUST INITIALIZATION ---
 if "brain" not in st.session_state:
-    st.session_state.brain = CompanyBrain()
+    try:
+        from brain import CompanyBrain
+        st.session_state.brain = CompanyBrain()
+    except Exception as e:
+        st.error(f"Ruby's brain is offline. Check brain.py or reboot. Error: {e}")
+        st.session_state.brain = None
+
     st.session_state.chat_history = [{"role": "assistant",
                                       "content": "Good day! I am RUBY. To assist me in giving you a good service, I would require a few details about you. May I start with your name?"}]
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
@@ -37,10 +42,11 @@ with st.sidebar:
 
     st.divider()
     st.markdown("### 📝 Captured Details")
-    u_name = st.text_input("Name", value=st.session_state.lead_data["Name"])
-    u_comp = st.text_input("Company", value=st.session_state.lead_data["Company"])
-    u_phon = st.text_input("Phone", value=st.session_state.lead_data["Phone"])
-    u_mail = st.text_input("Email", value=st.session_state.lead_data["Email"])
+    # Using session state values directly to keep fields updated
+    st.text(f"Name: {st.session_state.lead_data['Name']}")
+    st.text(f"Company: {st.session_state.lead_data['Company']}")
+    st.text(f"Phone: {st.session_state.lead_data['Phone']}")
+    st.text(f"Email: {st.session_state.lead_data['Email']}")
 
     if st.session_state.quote_step > 0:
         st.divider()
@@ -57,7 +63,7 @@ for msg in st.session_state.chat_history:
 if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # --- RIGID GARBAGE FILTER --- [cite: 2026-02-12]
+    # --- RIGID GARBAGE FILTER ---
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     garbage_list = [
         "my name is", "i am", "the company is", "we are", "is email", 
@@ -70,7 +76,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
         clean = clean.replace(word, "")
     clean = clean.strip().title()
 
-    # Global Listener [cite: 2026-02-12]
+    # Global Listener
     phone_match = re.search(r'(\d{3}\s?\d{3}\s?\d{4}|\d{9,})', prompt)
     if phone_match:
         st.session_state.lead_data["Phone"] = phone_match.group(0)
@@ -79,7 +85,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
     if email_match:
         st.session_state.lead_data["Email"] = email_match.group(0)
 
-    # --- NATURAL LEAD FLOW --- [cite: 2026-02-12]
+    # --- NATURAL LEAD FLOW ---
     answer = ""
     
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
@@ -91,9 +97,10 @@ if prompt := st.chat_input("Reply to Ruby..."):
         answer = "Got it. Just in case we get disconnected, what’s the best number to reach you on?"
 
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
+        # Phone captured by Global Listener
         answer = "Perfect. And lastly, what is your work email address? I'll use this to send you any catalogs or quotes we discuss."
 
-    # --- QUOTE WORKFLOW --- [cite: 2026-02-12]
+    # --- QUOTE WORKFLOW ---
     elif any(x in prompt.lower() for x in ["quote", "price", "how much"]) and st.session_state.quote_step == 0:
         st.session_state.quote_step = 1
         answer = f"Certainly {st.session_state.lead_data['Name']}, I can assist with that. Which product are you interested in (M82, Diaries, Gifts, etc.)?"
@@ -114,32 +121,41 @@ if prompt := st.chat_input("Reply to Ruby..."):
         st.session_state.quote_data["Budget"] = clean
         st.session_state.quote_step = 5
         
-        display_name = st.session_state.lead_data["Name"] if st.session_state.lead_data["Name"] else "Not provided"
+        display_name = st.session_state.lead_data["Name"] if st.session_state.lead_data["Name"] else "A Client"
         final_data = {**st.session_state.lead_data, **st.session_state.quote_data}
         send_to_office(final_data, "FULL QUOTE REQUEST: " + display_name)
         
-        answer = f"Perfect! I've made a note of your details:\n\nName: {display_name}\nPhone: {st.session_state.lead_data['Phone']}\nEmail: {st.session_state.lead_data['Email']}\n\nI have sent those details to our sales team. Is there anything else I can help with today?"
-    
+        answer = f"Perfect! I've made a note of your details for the {st.session_state.quote_data['Product']}. I have sent this request to our sales team at sales@brabys.co.za. Is there anything else I can help with?"
+
+    # --- BRAIN FALLBACK ---
     if not answer:
-        answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
+        if st.session_state.brain:
+            try:
+                answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
+            except:
+                answer = "I'm having a slight technical moment. Could you repeat that?"
+        else:
+            answer = "My brain is just warming up. Please tell me your name again?"
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # Auto-Email Trigger [cite: 2026-02-12]
+    # Auto-Email Trigger for Lead Capture
     if st.session_state.lead_data["Email"] and not st.session_state.mail_sent and st.session_state.quote_step < 5:
-        send_to_office(st.session_state.lead_data, "General Lead Captured: " + st.session_state.lead_data["Name"])
+        send_to_office(st.session_state.lead_data, "New Lead Captured: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
 
-    tts = gTTS(text=answer, lang='en', tld='co.uk')
+    # --- CLEAN VOICE OUTPUT ---
+    # Remove Markdown so gTTS doesn't say "star star" or "hash hash"
+    voice_text = re.sub(r'[\*\#\_]', '', answer)
+    tts = gTTS(text=voice_text, lang='en', tld='co.uk')
     tts.save("response.mp3")
     st.session_state.is_talking = True
     st.rerun()
 
-# --- VOICE PLAYBACK & FINAL STABILITY WAIT --- [cite: 2026-02-11]
+# --- VOICE PLAYBACK & FINAL STABILITY WAIT ---
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    # Timing calibrated for Llama 3.3 speech length [cite: 2026-02-11]
     wait = (len(st.session_state.last_text) / 9) + 4
     time.sleep(min(wait, 22)) 
     st.session_state.is_talking = False
