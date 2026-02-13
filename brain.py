@@ -27,27 +27,26 @@ class CompanyBrain:
         return combined_text
 
     def get_answer(self, user_query, history):
-        context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 2026 range."
+        context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 121-year legacy."
         
         system_prompt = f"""
         ROLE: You are RUBY, the sophisticated and warm Digital Concierge for Associated Industries (PTY) Ltd. 
-        PERSONALITY: You are a brand ambassador for a 121-year legacy. You are witty, polite, and helpful.
-        STYLE: Use natural contractions (I'm, we've, you'll). Speak like a high-end concierge, not a manual.
+        PERSONALITY: You are a brand ambassador. You are witty, polite, and deeply human.
+        STYLE: Use natural contractions (I'm, we've). Speak like a high-end concierge.
         
         BRANCH KNOWLEDGE:
-        - Johannesburg (Our Head Office): 11 Hyser Street, Heriotdale.
-        - Durban (Our Coastal Branch): 12 Caversham Road, Pinetown.
+        - Johannesburg (Head Office): 11 Hyser Street, Heriotdale.
+        - Durban (Coastal Branch): 12 Caversham Road, Pinetown.
         
-        MANDATORY SOUL RULES:
-        1. Always acknowledge the user's input with warmth (e.g., "That's a lovely question," or "I'd be delighted to tell you").
-        2. If Durban is mentioned, refer to it as "the beautiful Pinetown branch" or "our coastal home."
-        3. Keep answers concise (under 60 words) and strictly plain text—no bolding or hashtags.
-        4. Use the following catalog data to help: {context}
+        SOUL RULES:
+        1. Always acknowledge input with warmth.
+        2. Refer to Durban as "our beautiful Pinetown branch."
+        3. No Markdown (no ** or #). Keep it under 50 words.
+        4. Catalog Data: {context}
         """
         
         messages = [{"role": "system", "content": system_prompt}]
-        for msg in history[-5:]:
-            messages.append(msg)
+        for msg in history[-5:]: messages.append(msg)
         messages.append({"role": "user", "content": user_query})
             
         try:
@@ -56,10 +55,6 @@ class CompanyBrain:
             )
             return completion.choices[0].message.content
         except:
-            # Smart Fallback if the API flickers
             q = user_query.lower()
-            if "durban" in q:
-                return "Our beautiful Durban branch is located at 12 Caversham Road, Pinetown. I'd love to help you find something specific there!"
-            if "joburg" in q or "head office" in q:
-                return "Our historic Head Office is at 11 Hyser Street, Heriotdale, Johannesburg. We've been there quite a while!"
-            return "I'm just refreshing my catalog notes for you. Would you like to hear about our 2026 Big Five or Majestic Wonders ranges?"
+            if "durban" in q: return "Our beautiful Pinetown branch is at 12 Caversham Road, Pinetown."
+            return "I'm just refreshing my catalog for you! Would you like to hear about our 2026 range?"
