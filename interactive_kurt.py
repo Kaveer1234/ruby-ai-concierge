@@ -57,9 +57,10 @@ for msg in st.session_state.chat_history:
 if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # --- GLOBAL PATTERN RECOGNITION ---
+    # --- UPDATED GARBAGE FILTER (CLEAN DATA CAPTURE) --- [cite: 2026-02-12]
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
-    garbage = r'(my name is|i am|the company is|we are|is email|is my email|ruby|hi|hello|is my phone|is my name|is name)'
+    # Removes conversational filler to leave only the important data
+    garbage = r'(my name is|i am|the company is|we are|is email|is my email|ruby|hi|hello|is my phone|is my name|is name|my company name is|my number is|use this email)'
     clean = re.sub(garbage, '', prompt, flags=re.I).strip()
     refusal = any(word in clean.lower() for word in ["don't", "dont", "not", "refuse", "skip", "no", "rather not"])
 
@@ -112,9 +113,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
         st.session_state.quote_data["Budget"] = "N/A" if refusal else clean
         st.session_state.quote_step = 5
         
-        # FIXED: Pull Name correctly for recap
         display_name = st.session_state.lead_data["Name"] if st.session_state.lead_data["Name"] else "Not provided"
-        
         final_data = {**st.session_state.lead_data, **st.session_state.quote_data}
         send_to_office(final_data, "FULL QUOTE REQUEST: " + display_name)
         
@@ -126,7 +125,6 @@ if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # Lead Auto-Email [cite: 2026-02-12]
     if st.session_state.lead_data["Email"] and not st.session_state.mail_sent and st.session_state.quote_step < 5:
         send_to_office(st.session_state.lead_data, "General Lead Captured: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
@@ -136,11 +134,11 @@ if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.is_talking = True
     st.rerun()
 
-# --- VOICE PLAYBACK & DYNAMIC WAIT ---
+# --- VOICE PLAYBACK & EXTENDED WAIT --- [cite: 2026-02-11]
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    # UPDATED TIMING: Slower multiplier + 2 second buffer [cite: 2026-02-11]
-    wait = (len(st.session_state.last_text) / 12) + 2
-    time.sleep(min(wait, 12)) 
+    # Slowed multiplier to 10 + 3 second safety buffer [cite: 2026-02-11]
+    wait = (len(st.session_state.last_text) / 10) + 3
+    time.sleep(min(wait, 20)) # Max wait increased to 20 seconds [cite: 2026-02-11]
     st.session_state.is_talking = False
     st.rerun()
