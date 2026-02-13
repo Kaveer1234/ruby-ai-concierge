@@ -57,14 +57,20 @@ for msg in st.session_state.chat_history:
 if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
 
-    # --- UPDATED GARBAGE FILTER (CLEAN DATA CAPTURE) --- [cite: 2026-02-12]
+    # --- RIGID GARBAGE FILTER --- [cite: 2026-02-12]
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
-    # Removes conversational filler to leave only the important data
-    garbage = r'(my name is|i am|the company is|we are|is email|is my email|ruby|hi|hello|is my phone|is my name|is name|my company name is|my number is|use this email)'
-    clean = re.sub(garbage, '', prompt, flags=re.I).strip()
-    refusal = any(word in clean.lower() for word in ["don't", "dont", "not", "refuse", "skip", "no", "rather not"])
+    garbage_list = [
+        "my name is", "i am", "the company is", "we are", "is email", 
+        "is my email", "ruby", "hi", "hello", "is my phone", "is my name", 
+        "is name", "my company name is", "my number is", "use this email",
+        "i work for", "i work at", "company is called"
+    ]
+    clean = prompt.lower()
+    for word in garbage_list:
+        clean = clean.replace(word, "")
+    clean = clean.strip().title()
 
-    # Global Listener
+    # Global Listener [cite: 2026-02-12]
     phone_match = re.search(r'(\d{3}\s?\d{3}\s?\d{4}|\d{9,})', prompt)
     if phone_match:
         st.session_state.lead_data["Phone"] = phone_match.group(0)
@@ -77,17 +83,12 @@ if prompt := st.chat_input("Reply to Ruby..."):
     answer = ""
     
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
-        st.session_state.lead_data["Name"] = clean.title()
+        st.session_state.lead_data["Name"] = clean
         answer = f"Awesome, thanks {st.session_state.lead_data['Name']}! And which company are you with?"
 
     elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
-        if not any(x in prompt.lower() for x in ["quote", "price", "how much"]):
-            st.session_state.lead_data["Company"] = "N/A" if refusal else clean.title()
-            answer = "Got it. Just in case we get disconnected, what’s the best number to reach you on?"
-        else:
-            st.session_state.lead_data["Company"] = "Pending..."
-            st.session_state.quote_step = 1
-            answer = "I'll get that quote started! First, what's your phone number and which product are you interested in?"
+        st.session_state.lead_data["Company"] = clean
+        answer = "Got it. Just in case we get disconnected, what’s the best number to reach you on?"
 
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
         answer = "Perfect. And lastly, what is your work email address? I'll use this to send you any catalogs or quotes we discuss."
@@ -104,13 +105,13 @@ if prompt := st.chat_input("Reply to Ruby..."):
     elif st.session_state.quote_step == 2:
         st.session_state.quote_data["Quantity"] = clean
         st.session_state.quote_step = 3
-        answer = "For branding purposes, What Overprint Colours are required for your logo?"
+        answer = "For branding purposes, how many Overprint Colours are required for your logo?"
     elif st.session_state.quote_step == 3:
         st.session_state.quote_data["Colours"] = clean
         st.session_state.quote_step = 4
         answer = "Lastly, do you have a total budget in mind? (You can say 'No' if not available)."
     elif st.session_state.quote_step == 4:
-        st.session_state.quote_data["Budget"] = "N/A" if refusal else clean
+        st.session_state.quote_data["Budget"] = clean
         st.session_state.quote_step = 5
         
         display_name = st.session_state.lead_data["Name"] if st.session_state.lead_data["Name"] else "Not provided"
@@ -125,6 +126,7 @@ if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
+    # Auto-Email Trigger [cite: 2026-02-12]
     if st.session_state.lead_data["Email"] and not st.session_state.mail_sent and st.session_state.quote_step < 5:
         send_to_office(st.session_state.lead_data, "General Lead Captured: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
@@ -134,11 +136,11 @@ if prompt := st.chat_input("Reply to Ruby..."):
     st.session_state.is_talking = True
     st.rerun()
 
-# --- VOICE PLAYBACK & EXTENDED WAIT --- [cite: 2026-02-11]
+# --- VOICE PLAYBACK & FINAL STABILITY WAIT --- [cite: 2026-02-11]
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    # Slowed multiplier to 10 + 3 second safety buffer [cite: 2026-02-11]
-    wait = (len(st.session_state.last_text) / 10) + 3
-    time.sleep(min(wait, 20)) # Max wait increased to 20 seconds [cite: 2026-02-11]
+    # Timing calibrated for Llama 3.3 speech length [cite: 2026-02-11]
+    wait = (len(st.session_state.last_text) / 9) + 4
+    time.sleep(min(wait, 22)) 
     st.session_state.is_talking = False
     st.rerun()
