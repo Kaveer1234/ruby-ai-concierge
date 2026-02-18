@@ -50,18 +50,19 @@ if prompt := st.chat_input("Message Ruby..."):
     # --- STEP 1: INITIALIZE ANSWER ---
     answer = ""
     
-    # --- STEP 2: INTELLIGENT CLEANING ---
+    # --- STEP 2: REFINED INTELLIGENT CLEANING ---
     clean = prompt.lower()
     
-    # Clean the Name
+    # Phrases to strip out of the Name
+    name_fillers = ["hi", "hello", "my name is", "i am", "is my name", "call me"]
     if "your name" in last_ruby:
-        for word in ["hi", "hello", "my name is", "i am"]:
+        for word in name_fillers:
             clean = clean.replace(word, "")
     
-    # Clean the Company
+    # Phrases to strip out of the Company
+    company_fillers = ["my company is", "the company is", "representing", "we are", "is the company", "from"]
     if "which company" in last_ruby:
-        for word in ["my company is", "the company is", "representing", "we are", "brabys", "from"]:
-            # This ensures "My company is Brabys" becomes just "Brabys"
+        for word in company_fillers:
             clean = clean.replace(word, "")
     
     clean = clean.strip().title()
@@ -143,3 +144,4 @@ if st.session_state.is_talking:
     time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
+
