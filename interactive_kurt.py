@@ -37,7 +37,7 @@ with st.sidebar:
     st.divider()
     # Dynamic display of whoever is talking
     current_name = st.session_state.lead_data['Name'] or 'Guest'
-    st.write(f"**Chatting with:** {current_name}") [cite: 2026-02-06, 2026-02-11]
+    st.write(f"**Chatting with:** {current_name}")
 
 st.title("Associated Industries (PTY) Ltd")
 chat_box = st.container(height=400)
@@ -54,14 +54,14 @@ if prompt := st.chat_input("Message Ruby..."):
         for word in ["hi", "hello", "my name is", "i am"]:
             clean_name = clean_name.replace(word, "")
         st.session_state.lead_data["Name"] = clean_name.strip().title()
-        answer = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?" [cite: 2026-02-06, 2026-02-11]
+        answer = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
     
     # ... (Rest of the Lead & Quote logic stays the same) ...
     # Ensure all Lead logic uses {st.session_state.lead_data['Name']} instead of 'Kaveer'
     
     elif "@" in prompt and not st.session_state.mail_sent:
         st.session_state.lead_data["Email"] = prompt
-        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! How can I help you today?" [cite: 2026-02-06, 2026-02-12]
+        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! How can I help you today?" 
         send_to_office(st.session_state.lead_data, "NEW LEAD: " + st.session_state.lead_data["Name"])
         st.session_state.mail_sent = True
 
@@ -70,12 +70,12 @@ if prompt := st.chat_input("Message Ruby..."):
         if st.session_state.brain:
             answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
         else:
-            answer = "I'm right here! What can I tell you about our 2026 range?" [cite: 2026-02-09]
+            answer = "I'm right here! What can I tell you about our 2026 range?" 
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
     
-    # Voice Gen with Dynamic Wait [cite: 2026-02-11]
+    # Voice Gen with Dynamic Wait 
     voice_text = re.sub(r'[\*\#\_]', '', answer)
     gTTS(text=voice_text, lang='en', tld='co.uk').save("response.mp3")
     st.session_state.is_talking = True
@@ -83,8 +83,9 @@ if prompt := st.chat_input("Message Ruby..."):
 
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    # GOLD STANDARD WAIT [cite: 2026-02-11]
+    # GOLD STANDARD WAIT 
     wait_time = (len(st.session_state.last_text) / 9) + 4.5
     time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
+
