@@ -47,47 +47,53 @@ if prompt := st.chat_input("Message Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     
-    # --- STEP 1: INITIALIZE ANSWER ---
     answer = ""
     
-    # --- STEP 2: REFINED INTELLIGENT CLEANING ---
+    # --- STEP 2: ADVANCED CLEANING ENGINE ---
     clean = prompt.lower()
     
-    # Phrases to strip out of the Name
-    name_fillers = ["hi", "hello", "my name is", "i am", "is my name", "call me"]
+    # Phrases to strip for Name
+    name_fillers = ["hi", "hello", "my name is", "i am", "is my name", "call me", "name is"]
     if "your name" in last_ruby:
         for word in name_fillers:
             clean = clean.replace(word, "")
     
-    # Phrases to strip out of the Company
-    company_fillers = ["my company is", "the company is", "representing", "we are", "is the company", "from"]
+    # Phrases to strip for Company
+    company_fillers = ["my company is", "the company is", "representing", "we are", "is the company", "from", "company name is", "company is"]
     if "which company" in last_ruby:
         for word in company_fillers:
             clean = clean.replace(word, "")
     
+    # Phrases to strip for Phone
+    phone_fillers = ["my number is", "the number is", "reach me at", "phone number is", "cell number is"]
+    if "reach you on" in last_ruby:
+        for word in phone_fillers:
+            clean = clean.replace(word, "")
+    
     clean = clean.strip().title()
 
-    # Listeners for contact data
-    if re.search(r'\d{9,}', prompt): st.session_state.lead_data["Phone"] = prompt
+    # Listeners (Regex for cleaning phone numbers)
+    if re.search(r'\d{9,}', prompt): 
+        # Extracts only the digits so "My number is 031..." becomes "031..."
+        phone_digits = re.sub(r'\D', '', prompt)
+        st.session_state.lead_data["Phone"] = phone_digits
+    
     if "@" in prompt: st.session_state.lead_data["Email"] = prompt
 
     # --- STEP 3: CONVERSATIONAL LOGIC ---
     
-    # Name -> Company
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean
         answer = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
 
-    # Company -> Phone
     elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
         st.session_state.lead_data["Company"] = clean
         answer = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
 
-    # Phone -> Email
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
+        # Use the cleaned phone number in lead data
         answer = "I've got that. And finally, your work email address? I'll use it to send your 2026 catalog and quotes."
 
-    # Email Capture & Completion
     elif "@" in prompt and not st.session_state.mail_sent:
         st.session_state.lead_data["Email"] = prompt
         cat_url = "https://www.associatedindustries.co.za/catalog2026.pdf"
@@ -139,9 +145,7 @@ if prompt := st.chat_input("Message Ruby..."):
 
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
-    # GOLD STANDARD DYNAMIC WAIT
     wait_time = (len(st.session_state.last_text) / 9) + 4.5
     time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
-
