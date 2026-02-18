@@ -23,11 +23,15 @@ if "brain" not in st.session_state:
 
 st.set_page_config(page_title="Associated Industries", layout="wide")
 
+# --- UPDATED GOOGLE SHEETS FUNCTION ---
 def send_to_office(data, subject):
-    url = "https://formspree.io/f/xlgwgpla" 
-    data["_subject"] = subject
-    try: requests.post(url, data=data, timeout=8)
-    except: pass
+    # Your Unique Google Web App URL [cite: 2026-02-09]
+    url = "https://script.google.com/macros/s/AKfycbyPQB6SIQS836QcdVXwGbWkNtKkkbX2V-eHYteW4ghbVgYbkC-bJ7XZUNmtKnD_qihTIg/exec"
+    try: 
+        # Sending as params ensures the 'doPost(e)' script catches every field [cite: 2026-02-12]
+        requests.post(url, params=data, timeout=10)
+    except: 
+        pass
 
 # --- UI ---
 with st.sidebar:
@@ -49,39 +53,31 @@ if prompt := st.chat_input("Message Ruby..."):
     
     answer = ""
     
-    # --- STEP 2: ADVANCED CLEANING ENGINE ---
+    # --- INTELLIGENT CLEANING ---
     clean = prompt.lower()
     
-    # Phrases to strip for Name
-    name_fillers = ["hi", "hello", "my name is", "i am", "is my name", "call me", "name is"]
     if "your name" in last_ruby:
-        for word in name_fillers:
+        for word in ["hi", "hello", "my name is", "i am", "is my name", "call me", "name is"]:
             clean = clean.replace(word, "")
     
-    # Phrases to strip for Company
-    company_fillers = ["my company is", "the company is", "representing", "we are", "is the company", "from", "company name is", "company is"]
     if "which company" in last_ruby:
-        for word in company_fillers:
+        for word in ["my company is", "the company is", "representing", "we are", "is the company", "from", "company name is", "company is"]:
             clean = clean.replace(word, "")
     
-    # Phrases to strip for Phone
-    phone_fillers = ["my number is", "the number is", "reach me at", "phone number is", "cell number is"]
     if "reach you on" in last_ruby:
-        for word in phone_fillers:
+        for word in ["my number is", "the number is", "reach me at", "phone number is", "cell number is"]:
             clean = clean.replace(word, "")
     
     clean = clean.strip().title()
 
-    # Listeners (Regex for cleaning phone numbers)
+    # Listeners
     if re.search(r'\d{9,}', prompt): 
-        # Extracts only the digits so "My number is 031..." becomes "031..."
         phone_digits = re.sub(r'\D', '', prompt)
         st.session_state.lead_data["Phone"] = phone_digits
     
     if "@" in prompt: st.session_state.lead_data["Email"] = prompt
 
-    # --- STEP 3: CONVERSATIONAL LOGIC ---
-    
+    # --- CONVERSATIONAL LOGIC ---
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
         st.session_state.lead_data["Name"] = clean
         answer = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
@@ -91,14 +87,14 @@ if prompt := st.chat_input("Message Ruby..."):
         answer = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
 
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
-        # Use the cleaned phone number in lead data
         answer = "I've got that. And finally, your work email address? I'll use it to send your 2026 catalog and quotes."
 
     elif "@" in prompt and not st.session_state.mail_sent:
         st.session_state.lead_data["Email"] = prompt
         cat_url = "https://www.associatedindustries.co.za/catalog2026.pdf"
-        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2026 range here: {cat_url}. How can I help you today? I can provide a quote or find a branch."
-        send_to_office(st.session_state.lead_data, "NEW LEAD: " + st.session_state.lead_data["Name"])
+        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2026 range here: {cat_url}. How can I help you today?"
+        # Trigger Google Sheet Save [cite: 2026-02-12]
+        send_to_office(st.session_state.lead_data, "NEW LEAD")
         st.session_state.mail_sent = True
 
     # --- QUOTE WORKFLOW ---
@@ -124,7 +120,8 @@ if prompt := st.chat_input("Message Ruby..."):
     elif st.session_state.quote_step == 4:
         st.session_state.quote_data["Budget"] = prompt
         st.session_state.quote_step = 0
-        send_to_office({**st.session_state.lead_data, **st.session_state.quote_data}, "FULL QUOTE: " + st.session_state.lead_data["Name"])
+        # Save Full Quote to Google Sheet [cite: 2026-02-12]
+        send_to_office({**st.session_state.lead_data, **st.session_state.quote_data}, "FULL QUOTE")
         answer = "Wonderful! I've sent that request to our specialists. Is there anything else I can assist with, perhaps our branch locations?"
 
     # --- BRAIN FALLBACK ---
@@ -145,6 +142,7 @@ if prompt := st.chat_input("Message Ruby..."):
 
 if st.session_state.is_talking:
     st.audio("response.mp3", autoplay=True)
+    # GOLD STANDARD WAIT [cite: 2026-02-11]
     wait_time = (len(st.session_state.last_text) / 9) + 4.5
     time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
