@@ -47,21 +47,30 @@ if prompt := st.chat_input("Message Ruby..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     last_ruby = st.session_state.chat_history[-2]["content"].lower()
     
-    # FIX: Initialize answer to prevent NameError
+    # --- STEP 1: INITIALIZE ANSWER ---
     answer = ""
     
-    # 1. DYNAMIC NAME CAPTURE & CLEANING
+    # --- STEP 2: INTELLIGENT CLEANING ---
     clean = prompt.lower()
+    
+    # Clean the Name
     if "your name" in last_ruby:
         for word in ["hi", "hello", "my name is", "i am"]:
             clean = clean.replace(word, "")
+    
+    # Clean the Company
+    if "which company" in last_ruby:
+        for word in ["my company is", "the company is", "representing", "we are", "brabys", "from"]:
+            # This ensures "My company is Brabys" becomes just "Brabys"
+            clean = clean.replace(word, "")
+    
     clean = clean.strip().title()
 
     # Listeners for contact data
     if re.search(r'\d{9,}', prompt): st.session_state.lead_data["Phone"] = prompt
     if "@" in prompt: st.session_state.lead_data["Email"] = prompt
 
-    # --- THE SOULFUL FLOW LOGIC ---
+    # --- STEP 3: CONVERSATIONAL LOGIC ---
     
     # Name -> Company
     if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
@@ -71,7 +80,7 @@ if prompt := st.chat_input("Message Ruby..."):
     # Company -> Phone
     elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
         st.session_state.lead_data["Company"] = clean
-        answer = f"Ah, {clean}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
+        answer = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
 
     # Phone -> Email
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
