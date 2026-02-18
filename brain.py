@@ -30,17 +30,12 @@ class CompanyBrain:
         context = self.knowledge_base[:8000] if self.knowledge_base else "Associated Industries 2026 range."
         
         system_prompt = f"""
-        ROLE: You are RUBY, the warm and professional concierge for Associated Industries.
-        STYLE: Use natural contractions. Be charming.
-        
-        BRANCHES:
-        - Johannesburg: 11 Hyser Street, Heriotdale.
-        - Durban: 12 Caversham Road, Pinetown.
-        
-        RULES:
-        1. If the user says "no thanks" or "goodbye," wish them a wonderful day politely.
-        2. Keep answers under 50 words. No Markdown stars or hashes.
-        3. Knowledge Base: {context}
+        ROLE: You are RUBY, a sophisticated Digital Concierge.
+        DYNAMIC RULES:
+        1. Address the user by the name they provided earlier in this conversation. [cite: 2026-02-06]
+        2. If they ask for "multisheet calendars," describe the 2026 Majestic Wonders and Nature's Gallery. [cite: 2026-02-09]
+        3. Branches: Joburg (11 Hyser St, Heriotdale) and Durban (12 Caversham Rd, Pinetown). [cite: 2026-02-09]
+        4. No Markdown. Keep it under 50 words. [cite: 2026-02-09]
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -54,10 +49,10 @@ class CompanyBrain:
             )
             return completion.choices[0].message.content
         except:
-            # --- INTELLIGENT KEYWORD FALLBACK ---
+            # DYNAMIC FALLBACK
             q = user_query.lower()
-            if any(x in q for x in ["no thanks", "nothing else", "goodbye", "that is all"]):
-                return "You're most welcome! It was a pleasure assisting you today. Have a wonderful day further!"
-            if any(x in q for x in ["jhb", "johannesburg", "durban", "branch", "where are you"]):
-                return "We have our Head Office at 11 Hyser Street, Heriotdale (Joburg) and our coastal branch at 12 Caversham Road, Pinetown (Durban)."
-            return "I've noted that! I'm just pulling up the latest 2026 catalog details for you. Is there a specific product like a diary or calendar you're looking for?"
+            if any(x in q for x in ["no thanks", "goodbye", "nothing else"]):
+                return "It was a pleasure assisting you today! Have a wonderful day further." [cite: 2026-02-09]
+            if "multisheet" in q:
+                return "We certainly do! Our 2026 multisheet range is breathtaking. Would you like a quote?" [cite: 2026-02-09]
+            return "I've noted that! I'm just pulling up the latest 2026 catalog details for you. What else can I find for you?" [cite: 2026-02-09]
