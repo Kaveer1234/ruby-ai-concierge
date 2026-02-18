@@ -7,9 +7,7 @@ class CompanyBrain:
         self.api_key = os.environ.get("GROQ_API_KEY")
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
-        self.library_files = [
-            "library/Part1_compressed.pdf", "library/Part2_compressed.pdf",
-            "library/Part3_compressed.pdf", "library/Part4_compressed.pdf"
+        self.library_files = ["library/products.txt", "library/Part1_compressed.pdf", "library/Part2_compressed.pdf"]
         ]
         self.knowledge_base = self._load_library()
 
@@ -68,3 +66,4 @@ class CompanyBrain:
                 return "We have our Head Office in Heriotdale, Joburg, and our coastal branch in Pinetown, Durban. Which is more convenient for you?"
 
             return f"I've noted that, {user_name}! I'm just pulling up the latest 2026 catalog details for you. What else can I help you find?"
+
