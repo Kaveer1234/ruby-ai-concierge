@@ -49,7 +49,7 @@ class CompanyBrain:
         
         DYNAMIC RULES:
         1. Address the user by their name: {user_name}.
-        2. Use the KNOWLEDGE BASE to answer product questions (like Jumbo Posters or Majestic Wonders).
+        2. Use the KNOWLEDGE BASE to answer product questions (like Jumbo Posters or Majestically Wild).
         3. Branches: Joburg (Heriotdale) and Durban (Pinetown).
         4. No Markdown. Keep it under 50 words.
         5. If a product isn't in the knowledge base, offer to have a specialist call them.
@@ -75,4 +75,5 @@ class CompanyBrain:
                 return f"We certainly do, {user_name}! Our 2027 Multisheet range is breathtaking. Shall I get a price for you?"
             
             return f"I've noted that, {user_name}! I'm just pulling up the latest 2027 catalog details for you. What else can I help you find?"
+
 
