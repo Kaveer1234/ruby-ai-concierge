@@ -87,12 +87,12 @@ if prompt := st.chat_input("Message Ruby..."):
         answer = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
 
     elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
-        answer = "I've got that. And finally, your work email address? I'll use it to send your 2026 catalog and quotes."
+        answer = "I've got that. And finally, your work email address? I'll use it to send your 2027 catalog and quotes."
 
     elif "@" in prompt and not st.session_state.mail_sent:
         st.session_state.lead_data["Email"] = prompt
-        cat_url = "https://www.associatedindustries.co.za/catalog2026.pdf"
-        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2026 range here: {cat_url}. How can I help you today?"
+        cat_url = "https://www.associatedindustries.co.za/catalog2027.pdf"
+        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2027 range here: {cat_url}. How can I help you today?"
         # Trigger Google Sheet Save [cite: 2026-02-12]
         send_to_office(st.session_state.lead_data, "NEW LEAD")
         st.session_state.mail_sent = True
@@ -129,7 +129,7 @@ if prompt := st.chat_input("Message Ruby..."):
         if st.session_state.brain:
             answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
         else:
-            answer = "I'm right here! What can I tell you about our 2026 range?"
+            answer = "I'm right here! What can I tell you about our 2027 range?"
 
     st.session_state.last_text = answer
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
@@ -147,3 +147,4 @@ if st.session_state.is_talking:
     time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
+
