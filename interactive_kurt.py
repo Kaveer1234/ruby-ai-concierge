@@ -91,7 +91,7 @@ if prompt := st.chat_input("Message Ruby..."):
 
     elif "@" in prompt and not st.session_state.mail_sent:
         st.session_state.lead_data["Email"] = prompt
-        cat_url = "https://www.associatedindustries.co.za/catalog2027.pdf"
+        cat_url = "https://www.brabysebooks.co.za/outreach/calendaranddiaryshowcase/mobile/index.html#p=1"
         answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2027 range here: {cat_url}. How can I help you today?"
         # Trigger Google Sheet Save [cite: 2026-02-12]
         send_to_office(st.session_state.lead_data, "NEW LEAD")
@@ -147,4 +147,5 @@ if st.session_state.is_talking:
     time.sleep(min(wait_time, 25))
     st.session_state.is_talking = False
     st.rerun()
+
 
