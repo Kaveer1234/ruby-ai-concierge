@@ -7,7 +7,7 @@ class CompanyBrain:
         self.api_key = os.environ.get("GROQ_API_KEY")
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
-        # Prioritizing the text file for faster, cleaner lookups [cite: 2026-02-11]
+        # Prioritizing the text file for faster, cleaner lookups 
         self.library_files = [
             "library/products.txt", 
             "library/Part1_compressed.pdf", 
@@ -20,7 +20,7 @@ class CompanyBrain:
         for file_path in self.library_files:
             if os.path.exists(file_path):
                 try:
-                    # SMART LOADING: Check if it is a TXT or PDF [cite: 2026-02-11]
+                    # SMART LOADING: Check if it is a TXT or PDF 
                     if file_path.endswith(".txt"):
                         with open(file_path, "r", encoding="utf-8") as f:
                             combined_text += f.read() + "\n"
@@ -40,8 +40,8 @@ class CompanyBrain:
             if "pleasure to meet you, " in msg["content"]:
                 user_name = msg["content"].split("pleasure to meet you, ")[1].split("!")[0]
 
-        # Use the first 12,000 characters to ensure products.txt is fully included [cite: 2026-02-11]
-        context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2026 range."
+        # Use the first 12,000 characters to ensure products.txt is fully included 
+        context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2027 range."
         
         system_prompt = f"""
         ROLE: You are RUBY, a sophisticated Digital Concierge for Associated Industries.
@@ -69,9 +69,10 @@ class CompanyBrain:
             # --- DYNAMIC FALLBACKS ---
             q = user_query.lower()
             if "jumbo" in q or "poster" in q:
-                return f"Yes {user_name}, our Jumbo Posters (Ref: M18) are very popular! They are 900 by 580mm. Would you like a quote?"
+                return f"Yes {user_name}, our Jumbo Posters (Ref: N18) are very popular! They are 900 by 580mm. Would you like a quote?"
             
             if "multisheet" in q:
-                return f"We certainly do, {user_name}! Our 2026 Majestic Wonders range is breathtaking. Shall I get a price for you?"
+                return f"We certainly do, {user_name}! Our 2027 Multisheet range is breathtaking. Shall I get a price for you?"
             
-            return f"I've noted that, {user_name}! I'm just pulling up the latest 2026 catalog details for you. What else can I help you find?"
+            return f"I've noted that, {user_name}! I'm just pulling up the latest 2027 catalog details for you. What else can I help you find?"
+
