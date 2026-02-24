@@ -9,15 +9,33 @@ from brain import CompanyBrain
 # --- 1. MOBILE & DESKTOP UI SETUP ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
-# Custom CSS for responsiveness [cite: 2026-02-11]
 st.markdown("""
     <style>
-    .main { max-width: 800px; margin: 0 auto; }
-    .stVideo { width: 100% !important; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    /* Mobile adjustments */
+    /* Fix the video to the top of the screen */
+    .sticky-video {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 999;
+        background-color: white;
+        padding: 10px 0;
+        border-bottom: 2px solid #f0f2f6;
+    }
+    /* Add padding to the top of the chat so it doesn't hide under the video */
+    .main .block-container {
+        padding-top: 350px !important;
+    }
+    .stVideo { 
+        width: 100% !important; 
+        max-width: 600px; 
+        margin: 0 auto; 
+        display: block;
+        border-radius: 15px; 
+    }
     @media (max-width: 600px) {
+        .main .block-container { padding-top: 280px !important; }
         .stChatMessage { font-size: 14px !important; }
-        .stTitle { font-size: 22px !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -59,16 +77,17 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Corrected Filenames) ---
+# --- 4. THE VISUAL INTERFACE (Sticky Container) ---
+# This "div" works with the CSS above to keep the video pinned [cite: 2026-02-11]
+st.markdown('<div class="sticky-video">', unsafe_allow_html=True)
 st.title("RUBY - Associated Industries 2027")
-
-# We will use kurt_idle.mp4 as the primary avatar
 try:
     video_file = open('kurt_idle.mp4', 'rb') 
     video_bytes = video_file.read()
     st.video(video_bytes)
 except FileNotFoundError:
-    st.warning("Video file 'kurt_idle.mp4' not found in your GitHub folder.")
+    st.warning("Video file 'kurt_idle.mp4' not found.")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Display Chat History
 for message in st.session_state.messages:
@@ -115,4 +134,5 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.write(response)
         speak(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
+
 
