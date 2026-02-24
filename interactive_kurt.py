@@ -33,7 +33,7 @@ def clean_input(text, prefix_list):
 
 def save_to_sheets(data):
     """Sends clean data to Google [cite: 2026-02-12]."""
-    webhook_url = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE"
+    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data)
@@ -115,3 +115,4 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.write(response)
         speak(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
+
