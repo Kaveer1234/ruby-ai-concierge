@@ -7,26 +7,24 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. MOBILE & DESKTOP UI SETUP (The Final Fix) ---
+# --- 1. MOBILE & DESKTOP UI SETUP ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Force the Header to stay at the absolute top */
-    .stApp {
-        margin-top: 0px;
-    }
+    /* 1. Remove Streamlit headers and lock the app height */
     header { visibility: hidden; }
+    [data-testid="stHeader"] { display: none; }
     
-    /* 2. Create the Locked Video Box */
+    /* 2. THE LOCK: Fixed container for Title and Video */
     .video-lock-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 380px; /* Space for Title + Video */
-        background-color: white;
+        height: 380px; 
         z-index: 9999;
+        background-color: white;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -34,12 +32,13 @@ st.markdown("""
         padding-top: 10px;
     }
 
-    /* 3. Push the Chat content down so it doesn't hide behind the video */
+    /* 3. THE CHAT: Push it down so it starts below the video box */
     .main .block-container {
         padding-top: 400px !important;
+        max-width: 750px !important;
     }
 
-    /* 4. Mobile Overrides to keep it compact */
+    /* 4. Mobile Responsiveness */
     @media (max-width: 600px) {
         .video-lock-container { height: 260px; }
         .main .block-container { padding-top: 280px !important; }
@@ -52,44 +51,57 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. THE VISUAL INTERFACE (Dynamic Placeholder with Fixed Lock) ---
-# This placeholder stays pinned to the top of the browser window
+# --- 2. HELPER FUNCTIONS ---
+def clean_input(text, prefix_list):
+    clean_text = text.strip()
+    for prefix in prefix_list:
+        if clean_text.lower().startswith(prefix):
+            clean_text = clean_text[len(prefix):].strip()
+    return clean_text.rstrip(".")
+
+def save_to_sheets(data):
+    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
+    try:
+        data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        requests.post(webhook_url, json=data)
+    except Exception as e:
+        st.error(f"Sync Error: {e}")
+
+def speak(text):
+    tts = gTTS(text=text, lang='en', tld='co.za')
+    tts.save("response.mp3")
+    with open("response.mp3", "rb") as f:
+        data = f.read()
+        b64 = base64.b64encode(data).decode()
+        md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>'
+        st.markdown(md, unsafe_allow_html=True)
+    os.remove("response.mp3")
+
+# --- 3. INITIALIZATION ---
+if "step" not in st.session_state:
+    st.session_state.step = "name"
+    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": "", "Product": "", "Quantity": "", "Colours": "", "Budget": ""}
+    st.session_state.messages = []
+    st.session_state.avatar = "kurt_idle.mp4"
+
+brain = CompanyBrain()
+
+# --- 4. THE VISUAL INTERFACE (Single Fixed Function) ---
 video_placeholder = st.empty()
 
 def update_avatar(video_filename):
-    # This 'with' block ensures the content goes INTO the empty placeholder [cite: 2026-02-11]
     with video_placeholder.container():
-        # This div uses the 'video-lock-container' CSS from Section 1 [cite: 2026-02-11]
         st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
         try:
             video_file = open(video_filename, 'rb')
             video_bytes = video_file.read()
-            # We add a key so Streamlit tracks this specific video instance [cite: 2026-02-11]
             st.video(video_bytes)
         except FileNotFoundError:
             st.warning(f"File {video_filename} not found.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Show initial idle video ONLY ONCE here
-if "avatar" not in st.session_state:
-    st.session_state.avatar = "kurt_idle.mp4"
-
-update_avatar(st.session_state.avatar)
-
-def update_avatar(video_filename):
-    with video_placeholder.container():
-        st.markdown('<div class="video-lock">', unsafe_allow_html=True)
-        st.title("RUBY - Associated Industries 2027")
-        try:
-            video_file = open(video_filename, 'rb')
-            video_bytes = video_file.read()
-            st.video(video_bytes)
-        except FileNotFoundError:
-            st.warning(f"File {video_filename} not found.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# Show initial idle video
+# Initial draw
 update_avatar(st.session_state.avatar)
 
 # Display Chat History
@@ -103,11 +115,10 @@ if user_input := st.chat_input("Talk to RUBY..."):
     with st.chat_message("user"):
         st.write(user_input)
 
-    response = ""
-
-    # Set to talking video [cite: 2026-02-11]
+    # SWAP TO TALKING VIDEO [cite: 2026-02-11]
     update_avatar("kurt_talking.mp4")
 
+    response = ""
     if st.session_state.step == "name":
         if len(user_input.strip()) < 3 or user_input.lower() in ["hi", "hello", "hey"]:
             response = "Hello! I'm RUBY, your Digital Concierge. Before we look at our 2027 range, may I ask your name?"
@@ -135,15 +146,12 @@ if user_input := st.chat_input("Talk to RUBY..."):
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
-    # Output with Voice and Text
     with st.chat_message("assistant"):
         st.write(response)
         speak(response)
     
     st.session_state.messages.append({"role": "assistant", "content": response})
     
-    # Return to idle after speaking [cite: 2026-02-11]
-    time.sleep(1) # Small delay for the audio to finish
+    # RETURN TO IDLE after speaking [cite: 2026-02-11]
+    time.sleep(2) 
     update_avatar("kurt_idle.mp4")
-
-
