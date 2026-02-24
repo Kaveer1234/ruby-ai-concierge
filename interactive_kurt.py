@@ -6,49 +6,47 @@ from gtts import gTTS
 import os
 from brain import CompanyBrain
 
-# --- 1. MOBILE & DESKTOP UI SETUP ---
+# --- 1. MOBILE & DESKTOP UI SETUP (The Lock Fix) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Hide the default Streamlit header to save space */
-    header {visibility: hidden;}
-    [data-testid="stHeader"] {display: none;}
+    /* 1. Remove default Streamlit gaps and headers */
+    .stApp { margin-top: -80px; }
+    header { visibility: hidden; }
+    [data-testid="stHeader"] { display: none; }
 
-    /* 2. Create a solid fixed background for the video */
+    /* 2. The Video Container - FIXED and locked at top */
     .sticky-video {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 400px; /* Adjust this if the video looks too big */
-        z-index: 1000;
+        height: 380px; 
+        z-index: 9999;
         background-color: white;
-        padding-top: 10px;
-        text-align: center;
+        padding-top: 20px;
         border-bottom: 2px solid #e6e6e6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
-    /* 3. Force the Chat to respect the 400px boundary */
+    /* 3. The Chat Area - Offset below the video */
     .main .block-container {
-        margin-top: 400px !important;
-        padding-top: 0px !important;
+        padding-top: 400px !important;
+        max-width: 700px !important;
     }
 
-    /* 4. Ensure the video fits perfectly inside our fixed area */
-    .stVideo {
-        max-width: 450px;
-        margin: 0 auto;
-        border-radius: 10px;
-    }
-
-    /* 5. Mobile override to prevent screen hogging */
+    /* 4. Mobile Responsiveness Overrides */
     @media (max-width: 600px) {
-        .sticky-video { height: 280px; }
-        .main .block-container { margin-top: 280px !important; }
-        .stVideo { max-width: 90% !important; }
+        .sticky-video { height: 260px; }
+        .main .block-container { padding-top: 280px !important; }
+        .stVideo { max-height: 160px; }
         h1 { font-size: 1.2rem !important; }
     }
+
+    .stVideo { width: 100%; max-width: 480px; border-radius: 15px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -63,6 +61,7 @@ def clean_input(text, prefix_list):
 
 def save_to_sheets(data):
     """Sends clean data to Google [cite: 2026-02-12]."""
+    # Your confirmed Version 2 URL
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -90,10 +89,10 @@ if "step" not in st.session_state:
 brain = CompanyBrain()
 
 # --- 4. THE VISUAL INTERFACE (Sticky Container) ---
-# This "div" works with the CSS above to keep the video pinned [cite: 2026-02-11]
 st.markdown('<div class="sticky-video">', unsafe_allow_html=True)
 st.title("RUBY - Associated Industries 2027")
 try:
+    # Pointing to the correct file in your GitHub
     video_file = open('kurt_idle.mp4', 'rb') 
     video_bytes = video_file.read()
     st.video(video_bytes)
@@ -139,6 +138,7 @@ if user_input := st.chat_input("Talk to RUBY..."):
         response = f"Got it! I've sent your details to the team. How can I help you with our 2027 range today?"
 
     else:
+        # Pulls from your uploaded products.txt via brain.py [cite: 2026-02-11]
         response = brain.get_answer(user_input, st.session_state.messages)
 
     # Output with Voice and Text
@@ -146,7 +146,3 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.write(response)
         speak(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
-
-
-
-
