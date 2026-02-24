@@ -47,12 +47,16 @@ if user_input := st.chat_input("Type your message here..."):
 
     response = ""
 
-    # --- STEP 1: NAME CAPTURE ---
+    # --- STEP 1: NAME CAPTURE (With 'Hi' Filter) ---
     if st.session_state.step == "name":
-        prefixes = ["hi my name is ", "my name is ", "i am ", "this is ", "name is "]
-        st.session_state.lead_data["Name"] = clean_input(user_input, prefixes)
-        st.session_state.step = "company"
-        response = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
+        # Check if they just said hello [cite: 2026-02-11]
+        if len(user_input.strip()) < 3 or user_input.lower() in ["hi", "hello", "hey", "good morning"]:
+            response = "Hello! I'm RUBY, your Digital Concierge. Before we dive into our 2027 range, may I ask what your name is?"
+        else:
+            prefixes = ["hi my name is ", "my name is ", "i am ", "this is ", "name is "]
+            st.session_state.lead_data["Name"] = clean_input(user_input, prefixes)
+            st.session_state.step = "company"
+            response = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
 
     # --- STEP 2: COMPANY CAPTURE ---
     elif st.session_state.step == "company":
@@ -71,13 +75,12 @@ if user_input := st.chat_input("Type your message here..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input.lower().strip()
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data) # Initial lead save [cite: 2026-02-12]
-        response = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2027 range here: https://www.associatedindustries.co.za/catalog2027.pdf. How can I help you today?"
+        save_to_sheets(st.session_state.lead_data) # Initial lead save to sheet [cite: 2026-02-12]
+        response = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! How can I help you find the perfect 2027 calendars today?"
 
-    # --- STEP 5: GENERAL CHAT & QUOTING ---
+    # --- STEP 5: GENERAL CHAT & KNOWLEDGE BASE ---
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
-        # If the brain detects quote intent, you can update lead_data and call save_to_sheets(st.session_state.lead_data) again.
 
     # Display RUBY's response
     with st.chat_message("assistant"):
