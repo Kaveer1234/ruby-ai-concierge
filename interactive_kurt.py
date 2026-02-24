@@ -85,21 +85,21 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (ONE FUNCTION ONLY) ---
+# --- 4. THE VISUAL INTERFACE (Simplified for Stability) ---
 video_placeholder = st.empty()
 
 def update_avatar(video_filename):
-    # This 'key' ensures the video reloads properly when swapping files [cite: 2026-02-11]
-    v_key = f"vid_{video_filename}_{int(time.time())}"
     with video_placeholder.container():
         st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
         try:
-            video_file = open(video_filename, 'rb')
-            video_bytes = video_file.read()
-            st.video(video_bytes, key=v_key)
-        except FileNotFoundError:
-            st.warning(f"File {video_filename} not found.")
+            # Open and read the file fresh each time to ensure data is clean
+            with open(video_filename, 'rb') as f:
+                video_bytes = f.read()
+            # Removed the 'key' argument which was causing the TypeError
+            st.video(video_bytes, autoplay=True, loop=True, muted=True)
+        except Exception as e:
+            st.warning(f"Avatar Error: {video_filename}")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # Initial draw
@@ -156,3 +156,4 @@ if user_input := st.chat_input("Talk to RUBY..."):
     # REVERT TO IDLE [cite: 2026-02-11]
     time.sleep(2) 
     update_avatar("kurt_idle.mp4")
+
