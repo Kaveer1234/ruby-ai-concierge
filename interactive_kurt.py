@@ -4,27 +4,26 @@ import base64
 from datetime import datetime
 from gtts import gTTS
 import os
+import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP (Simplified & Stable) ---
+# --- 1. UI SETUP (Stable Sticky) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* Clean up the top space without breaking the layout */
-    .block-container { padding-top: 2rem !important; }
-    
-    /* Ensure the video looks good on all screens */
-    .stVideo { width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    
-    /* Make the Title stand out */
-    .ruby-header { 
-        text-align: center; 
-        color: #31333F; 
-        font-family: sans-serif; 
-        font-weight: bold; 
-        font-size: 24px; 
-        margin-bottom: 20px; 
+    .video-lock {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: white;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #f0f2f6;
+    }
+    .stVideo { width: 100% !important; border-radius: 15px; max-height: 350px; }
+    @media (max-width: 600px) {
+        .stVideo { max-height: 200px; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -38,7 +37,6 @@ def clean_input(text, prefix_list):
     return clean_text.rstrip(".")
 
 def save_to_sheets(data):
-    # Your confirmed Version 2 URL
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -61,22 +59,28 @@ if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": "", "Product": "", "Quantity": "", "Colours": "", "Budget": ""}
     st.session_state.messages = []
+    st.session_state.avatar = "kurt_idle.mp4" # Default state
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Safe Method) ---
-# We use a standard container here to avoid the "White Box" overlap
-header_container = st.container()
-with header_container:
-    st.markdown('<div class="ruby-header">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
-    try:
-        # Re-linking your GitHub file
-        video_file = open('kurt_idle.mp4', 'rb') 
-        video_bytes = video_file.read()
-        st.video(video_bytes)
-    except FileNotFoundError:
-        st.warning("Video file 'kurt_idle.mp4' not found.")
-    st.divider()
+# --- 4. THE VISUAL INTERFACE (Dynamic Placeholder) ---
+# We use a placeholder so we can update the video file without refreshing the whole page [cite: 2026-02-11]
+video_placeholder = st.empty()
+
+def update_avatar(video_filename):
+    with video_placeholder.container():
+        st.markdown('<div class="video-lock">', unsafe_allow_html=True)
+        st.title("RUBY - Associated Industries 2027")
+        try:
+            video_file = open(video_filename, 'rb')
+            video_bytes = video_file.read()
+            st.video(video_bytes)
+        except FileNotFoundError:
+            st.warning(f"File {video_filename} not found.")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# Show initial idle video
+update_avatar(st.session_state.avatar)
 
 # Display Chat History
 for message in st.session_state.messages:
@@ -90,6 +94,9 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.write(user_input)
 
     response = ""
+
+    # Set to talking video [cite: 2026-02-11]
+    update_avatar("kurt_talking.mp4")
 
     if st.session_state.step == "name":
         if len(user_input.strip()) < 3 or user_input.lower() in ["hi", "hello", "hey"]:
@@ -122,4 +129,9 @@ if user_input := st.chat_input("Talk to RUBY..."):
     with st.chat_message("assistant"):
         st.write(response)
         speak(response)
+    
     st.session_state.messages.append({"role": "assistant", "content": response})
+    
+    # Return to idle after speaking [cite: 2026-02-11]
+    time.sleep(1) # Small delay for the audio to finish
+    update_avatar("kurt_idle.mp4")
