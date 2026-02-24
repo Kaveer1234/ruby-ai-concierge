@@ -11,43 +11,43 @@ st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Fix the Header/Video to the top */
-    [data-testid="stHeader"] {
-        z-index: 0;
-    }
-    
+    /* 1. Hide the default Streamlit header to save space */
+    header {visibility: hidden;}
+    [data-testid="stHeader"] {display: none;}
+
+    /* 2. Create a solid fixed background for the video */
     .sticky-video {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 380px; /* Fixed height for video area */
-        z-index: 9999;
+        height: 400px; /* Adjust this if the video looks too big */
+        z-index: 1000;
         background-color: white;
-        padding: 10px;
-        border-bottom: 3px solid #f0f2f6;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        padding-top: 10px;
+        text-align: center;
+        border-bottom: 2px solid #e6e6e6;
     }
 
-    /* 2. Force the chat history to start BELOW the video and stay there */
+    /* 3. Force the Chat to respect the 400px boundary */
     .main .block-container {
-        margin-top: 380px !important; 
-        padding-top: 20px !important;
+        margin-top: 400px !important;
+        padding-top: 0px !important;
     }
 
-    /* 3. Mobile specific height adjustments */
+    /* 4. Ensure the video fits perfectly inside our fixed area */
+    .stVideo {
+        max-width: 450px;
+        margin: 0 auto;
+        border-radius: 10px;
+    }
+
+    /* 5. Mobile override to prevent screen hogging */
     @media (max-width: 600px) {
-        .sticky-video { height: 300px; }
-        .main .block-container { margin-top: 300px !important; }
-        .stVideo { max-height: 180px; }
-    }
-
-    .stVideo { 
-        width: 100% !important; 
-        max-width: 500px; 
-        border-radius: 15px; 
+        .sticky-video { height: 280px; }
+        .main .block-container { margin-top: 280px !important; }
+        .stVideo { max-width: 90% !important; }
+        h1 { font-size: 1.2rem !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -146,6 +146,7 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.write(response)
         speak(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
+
 
 
 
