@@ -53,23 +53,28 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- 4. THE VISUAL INTERFACE (Dynamic Placeholder with Fixed Lock) ---
-# This placeholder sits inside the fixed container [cite: 2026-02-11]
+# This placeholder stays pinned to the top of the browser window
 video_placeholder = st.empty()
 
 def update_avatar(video_filename):
-    # This wrapper ensures the video stays inside the 'video-lock-container' [cite: 2026-02-11]
-    st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
-    st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
-    try:
-        video_file = open(video_filename, 'rb')
-        video_bytes = video_file.read()
-        # Using a key ensures Streamlit doesn't refresh the whole page when swapping [cite: 2026-02-11]
-        st.video(video_bytes)
-    except FileNotFoundError:
-        st.warning(f"File {video_filename} not found.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    # This 'with' block ensures the content goes INTO the empty placeholder [cite: 2026-02-11]
+    with video_placeholder.container():
+        # This div uses the 'video-lock-container' CSS from Section 1 [cite: 2026-02-11]
+        st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
+        st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
+        try:
+            video_file = open(video_filename, 'rb')
+            video_bytes = video_file.read()
+            # We add a key so Streamlit tracks this specific video instance [cite: 2026-02-11]
+            st.video(video_bytes)
+        except FileNotFoundError:
+            st.warning(f"File {video_filename} not found.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# Show initial idle video
+# Show initial idle video ONLY ONCE here
+if "avatar" not in st.session_state:
+    st.session_state.avatar = "kurt_idle.mp4"
+
 update_avatar(st.session_state.avatar)
 
 def update_avatar(video_filename):
@@ -140,4 +145,5 @@ if user_input := st.chat_input("Talk to RUBY..."):
     # Return to idle after speaking [cite: 2026-02-11]
     time.sleep(1) # Small delay for the audio to finish
     update_avatar("kurt_idle.mp4")
+
 
