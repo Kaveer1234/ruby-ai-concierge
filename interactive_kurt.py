@@ -6,53 +6,54 @@ from gtts import gTTS
 import os
 from brain import CompanyBrain
 
-# --- 1. MOBILE & DESKTOP UI SETUP (The Final Fix) ---
+# --- 1. MOBILE & DESKTOP UI SETUP (The Final Header Fix) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Eliminate the invisible Streamlit padding and gaps */
+    /* 1. Hide default headers and clear top space */
     header { visibility: hidden; height: 0px !important; }
     [data-testid="stHeader"] { display: none; }
     .stApp { margin-top: -100px; }
     
-    /* 2. THE LOCK: Fixed container for Title and Video */
-    .sticky-video {
+    /* 2. THE WHITE BOX: Group Title + Video together */
+    .sticky-header {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 380px; 
+        height: 400px; 
         z-index: 9999;
         background-color: white;
-        padding-top: 20px;
-        border-bottom: 2px solid #e6e6e6;
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: flex-start;
+        padding-top: 20px;
+        border-bottom: 2px solid #e6e6e6;
     }
 
-    /* 3. THE CHAT: Starts strictly BELOW the video line */
+    /* 3. THE CHAT: Push it down so it starts after the white box */
     .main .block-container {
-        padding-top: 400px !important;
+        padding-top: 420px !important; 
         max-width: 750px !important;
     }
 
-    /* 4. Mobile Responsiveness Overrides */
+    /* 4. Mobile specific sizes to keep the white box smaller */
     @media (max-width: 600px) {
-        .sticky-video { height: 260px; }
-        .main .block-container { padding-top: 280px !important; }
-        .stVideo { max-height: 160px; }
-        h1 { font-size: 1.1rem !important; margin-bottom: 5px !important; }
+        .sticky-header { height: 300px; }
+        .main .block-container { padding-top: 320px !important; }
+        .stVideo { max-height: 180px; }
+        .ruby-title { font-size: 1.2rem !important; margin-bottom: 5px !important; }
     }
 
     .stVideo { width: 100%; max-width: 480px; border-radius: 12px; }
+    .ruby-title { color: #31333F; font-family: sans-serif; font-weight: bold; font-size: 1.8rem; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 2. HELPER FUNCTIONS ---
 def clean_input(text, prefix_list):
-    """Strips conversational phrases."""
     clean_text = text.strip()
     for prefix in prefix_list:
         if clean_text.lower().startswith(prefix):
@@ -60,8 +61,7 @@ def clean_input(text, prefix_list):
     return clean_text.rstrip(".")
 
 def save_to_sheets(data):
-    """Sends clean data to Google."""
-    # Using your Version 2 URL from Feb 24
+    # Your confirmed Version 2 URL
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -70,7 +70,6 @@ def save_to_sheets(data):
         st.error(f"Sync Error: {e}")
 
 def speak(text):
-    """Voice engine with dynamic output."""
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
     with open("response.mp3", "rb") as f:
@@ -88,11 +87,12 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Sticky Container) ---
-st.markdown('<div class="sticky-video">', unsafe_allow_html=True)
-st.title("RUBY - Associated Industries 2027")
+# --- 4. THE VISUAL INTERFACE (Corrected Layout) ---
+# Everything inside this 'div' stays inside the white box [cite: 2026-02-11]
+st.markdown('<div class="sticky-header">', unsafe_allow_html=True)
+st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
 try:
-    # Points to your confirmed GitHub filename
+    # Pointing to your GitHub file
     video_file = open('kurt_idle.mp4', 'rb') 
     video_bytes = video_file.read()
     st.video(video_bytes)
