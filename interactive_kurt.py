@@ -1,31 +1,55 @@
 import streamlit as st
 import requests
+import base64
 from datetime import datetime
+from gtts import gTTS
+import os
 from brain import CompanyBrain
 
-# --- HELPER FUNCTIONS ---
+# --- 1. MOBILE-FRIENDLY UI SETUP ---
+st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
+
+# Custom CSS for Mobile Responsiveness [cite: 2026-02-11]
+st.markdown("""
+    <style>
+    .main { max-width: 800px; margin: 0 auto; }
+    .stVideo { width: 100% !important; border-radius: 15px; }
+    @media (max-width: 600px) {
+        .stChatMessage { font-size: 14px !important; }
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- 2. HELPER FUNCTIONS ---
 def clean_input(text, prefix_list):
-    """Strips conversational phrases to keep data clean for the sheet [cite: 2026-02-11]."""
+    """Strips conversational phrases [cite: 2026-02-11]."""
     clean_text = text.strip()
     for prefix in prefix_list:
         if clean_text.lower().startswith(prefix):
             clean_text = clean_text[len(prefix):].strip()
-    # Remove trailing punctuation like full stops
-    if clean_text.endswith("."):
-        clean_text = clean_text[:-1]
-    return clean_text
+    return clean_text.rstrip(".")
 
 def save_to_sheets(data):
-    """Sends lead data to your Google Apps Script URL [cite: 2026-02-12]."""
-    # PASTE YOUR WEB APP URL HERE
+    """Sends clean data to Google [cite: 2026-02-12]."""
     webhook_url = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data)
     except Exception as e:
-        print(f"Error saving to sheets: {e}")
+        st.error(f"Sync Error: {e}")
 
-# --- INITIALIZATION ---
+def speak(text):
+    """Voice engine with dynamic wait [cite: 2026-02-09, 2026-02-11]."""
+    tts = gTTS(text=text, lang='en', tld='co.za')
+    tts.save("response.mp3")
+    with open("response.mp3", "rb") as f:
+        data = f.read()
+        b64 = base64.b64encode(data).decode()
+        md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>'
+        st.markdown(md, unsafe_allow_html=True)
+    os.remove("response.mp3")
+
+# --- 3. INITIALIZATION ---
 if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": "", "Product": "", "Quantity": "", "Colours": "", "Budget": ""}
@@ -33,56 +57,57 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
+# --- 4. THE VISUAL INTERFACE ---
 st.title("RUBY - Associated Industries 2027")
 
-# --- CHAT INTERFACE ---
+# Restore Video Avatar Container [cite: 2026-02-09]
+# Replace 'avatar.mp4' with your actual video filename
+video_file = open('avatar.mp4', 'rb')
+video_bytes = video_file.read()
+st.video(video_bytes)
+
+# Display Chat History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-if user_input := st.chat_input("Type your message here..."):
+# --- 5. LOGIC FLOW ---
+if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.write(user_input)
 
     response = ""
 
-    # --- STEP 1: NAME CAPTURE (With 'Hi' Filter) ---
     if st.session_state.step == "name":
-        # Check if they just said hello [cite: 2026-02-11]
-        if len(user_input.strip()) < 3 or user_input.lower() in ["hi", "hello", "hey", "good morning"]:
-            response = "Hello! I'm RUBY, your Digital Concierge. Before we dive into our 2027 range, may I ask what your name is?"
+        if len(user_input.strip()) < 3 or user_input.lower() in ["hi", "hello", "hey"]:
+            response = "Hello! I'm RUBY. Before we look at our 2027 calendars, may I ask your name?"
         else:
-            prefixes = ["hi my name is ", "my name is ", "i am ", "this is ", "name is "]
-            st.session_state.lead_data["Name"] = clean_input(user_input, prefixes)
+            st.session_state.lead_data["Name"] = clean_input(user_input, ["my name is ", "hi my name is ", "i am "])
             st.session_state.step = "company"
-            response = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
+            response = f"It's a pleasure, {st.session_state.lead_data['Name']}! Which company are you with?"
 
-    # --- STEP 2: COMPANY CAPTURE ---
     elif st.session_state.step == "company":
-        prefixes = ["my company is ", "company is ", "i am from ", "representing ", "my company name is "]
-        st.session_state.lead_data["Company"] = clean_input(user_input, prefixes)
+        st.session_state.lead_data["Company"] = clean_input(user_input, ["my company is ", "representing ", "from "])
         st.session_state.step = "phone"
-        response = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
+        response = f"{st.session_state.lead_data['Company']}! Excellent. What's your contact number for the quote?"
 
-    # --- STEP 3: PHONE CAPTURE ---
     elif st.session_state.step == "phone":
         st.session_state.lead_data["Phone"] = user_input.strip()
         st.session_state.step = "email"
-        response = "I've got that. And finally, your work email address? I'll use it to send your 2027 catalog and quotes."
+        response = "Thank you. And your work email address to send the 2027 catalog?"
 
-    # --- STEP 4: EMAIL CAPTURE & FIRST SAVE ---
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input.lower().strip()
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data) # Initial lead save to sheet [cite: 2026-02-12]
-        response = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! How can I help you find the perfect 2027 calendars today?"
+        save_to_sheets(st.session_state.lead_data) # [cite: 2026-02-12]
+        response = f"Got it! I've sent your details to the team. How can I help you with our 2027 range today?"
 
-    # --- STEP 5: GENERAL CHAT & KNOWLEDGE BASE ---
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
-    # Display RUBY's response
+    # Output with Voice and Text [cite: 2026-02-09]
     with st.chat_message("assistant"):
         st.write(response)
+        speak(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
