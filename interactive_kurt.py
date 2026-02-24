@@ -6,49 +6,26 @@ from gtts import gTTS
 import os
 from brain import CompanyBrain
 
-# --- 1. MOBILE & DESKTOP UI SETUP (The Final Header Fix) ---
+# --- 1. UI SETUP (Simplified & Stable) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Hide default headers and clear top space */
-    header { visibility: hidden; height: 0px !important; }
-    [data-testid="stHeader"] { display: none; }
-    .stApp { margin-top: -100px; }
+    /* Clean up the top space without breaking the layout */
+    .block-container { padding-top: 2rem !important; }
     
-    /* 2. THE WHITE BOX: Group Title + Video together */
-    .sticky-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 400px; 
-        z-index: 9999;
-        background-color: white;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        padding-top: 20px;
-        border-bottom: 2px solid #e6e6e6;
+    /* Ensure the video looks good on all screens */
+    .stVideo { width: 100%; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    
+    /* Make the Title stand out */
+    .ruby-header { 
+        text-align: center; 
+        color: #31333F; 
+        font-family: sans-serif; 
+        font-weight: bold; 
+        font-size: 24px; 
+        margin-bottom: 20px; 
     }
-
-    /* 3. THE CHAT: Push it down so it starts after the white box */
-    .main .block-container {
-        padding-top: 420px !important; 
-        max-width: 750px !important;
-    }
-
-    /* 4. Mobile specific sizes to keep the white box smaller */
-    @media (max-width: 600px) {
-        .sticky-header { height: 300px; }
-        .main .block-container { padding-top: 320px !important; }
-        .stVideo { max-height: 180px; }
-        .ruby-title { font-size: 1.2rem !important; margin-bottom: 5px !important; }
-    }
-
-    .stVideo { width: 100%; max-width: 480px; border-radius: 12px; }
-    .ruby-title { color: #31333F; font-family: sans-serif; font-weight: bold; font-size: 1.8rem; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -87,18 +64,19 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Corrected Layout) ---
-# Everything inside this 'div' stays inside the white box [cite: 2026-02-11]
-st.markdown('<div class="sticky-header">', unsafe_allow_html=True)
-st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
-try:
-    # Pointing to your GitHub file
-    video_file = open('kurt_idle.mp4', 'rb') 
-    video_bytes = video_file.read()
-    st.video(video_bytes)
-except FileNotFoundError:
-    st.warning("Video file 'kurt_idle.mp4' not found.")
-st.markdown('</div>', unsafe_allow_html=True)
+# --- 4. THE VISUAL INTERFACE (Safe Method) ---
+# We use a standard container here to avoid the "White Box" overlap
+header_container = st.container()
+with header_container:
+    st.markdown('<div class="ruby-header">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
+    try:
+        # Re-linking your GitHub file
+        video_file = open('kurt_idle.mp4', 'rb') 
+        video_bytes = video_file.read()
+        st.video(video_bytes)
+    except FileNotFoundError:
+        st.warning("Video file 'kurt_idle.mp4' not found.")
+    st.divider()
 
 # Display Chat History
 for message in st.session_state.messages:
