@@ -12,11 +12,10 @@ st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Remove Streamlit headers and lock the app height */
     header { visibility: hidden; }
     [data-testid="stHeader"] { display: none; }
     
-    /* 2. THE LOCK: Fixed container for Title and Video */
+    /* THE LOCK: Pinning the video container to the absolute top of the window */
     .video-lock-container {
         position: fixed;
         top: 0;
@@ -32,13 +31,13 @@ st.markdown("""
         padding-top: 10px;
     }
 
-    /* 3. THE CHAT: Push it down so it starts below the video box */
+    /* THE CHAT: Pushing content down so it starts below the video box */
     .main .block-container {
         padding-top: 400px !important;
         max-width: 750px !important;
     }
 
-    /* 4. Mobile Responsiveness */
+    /* Mobile adjustments */
     @media (max-width: 600px) {
         .video-lock-container { height: 260px; }
         .main .block-container { padding-top: 280px !important; }
@@ -86,17 +85,19 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Single Fixed Function) ---
+# --- 4. THE VISUAL INTERFACE (ONE FUNCTION ONLY) ---
 video_placeholder = st.empty()
 
 def update_avatar(video_filename):
+    # This 'key' ensures the video reloads properly when swapping files [cite: 2026-02-11]
+    v_key = f"vid_{video_filename}_{int(time.time())}"
     with video_placeholder.container():
         st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
         try:
             video_file = open(video_filename, 'rb')
             video_bytes = video_file.read()
-            st.video(video_bytes)
+            st.video(video_bytes, key=v_key)
         except FileNotFoundError:
             st.warning(f"File {video_filename} not found.")
         st.markdown('</div>', unsafe_allow_html=True)
@@ -115,7 +116,7 @@ if user_input := st.chat_input("Talk to RUBY..."):
     with st.chat_message("user"):
         st.write(user_input)
 
-    # SWAP TO TALKING VIDEO [cite: 2026-02-11]
+    # SWAP TO TALKING [cite: 2026-02-11]
     update_avatar("kurt_talking.mp4")
 
     response = ""
@@ -152,6 +153,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
     
     st.session_state.messages.append({"role": "assistant", "content": response})
     
-    # RETURN TO IDLE after speaking [cite: 2026-02-11]
+    # REVERT TO IDLE [cite: 2026-02-11]
     time.sleep(2) 
     update_avatar("kurt_idle.mp4")
