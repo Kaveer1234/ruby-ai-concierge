@@ -6,17 +6,17 @@ from gtts import gTTS
 import os
 from brain import CompanyBrain
 
-# --- 1. MOBILE & DESKTOP UI SETUP (The Lock Fix) ---
+# --- 1. MOBILE & DESKTOP UI SETUP (The Final Fix) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Remove default Streamlit gaps and headers */
-    .stApp { margin-top: -80px; }
-    header { visibility: hidden; }
+    /* 1. Eliminate the invisible Streamlit padding and gaps */
+    header { visibility: hidden; height: 0px !important; }
     [data-testid="stHeader"] { display: none; }
-
-    /* 2. The Video Container - FIXED and locked at top */
+    .stApp { margin-top: -100px; }
+    
+    /* 2. THE LOCK: Fixed container for Title and Video */
     .sticky-video {
         position: fixed;
         top: 0;
@@ -32,10 +32,10 @@ st.markdown("""
         align-items: center;
     }
 
-    /* 3. The Chat Area - Offset below the video */
+    /* 3. THE CHAT: Starts strictly BELOW the video line */
     .main .block-container {
         padding-top: 400px !important;
-        max-width: 700px !important;
+        max-width: 750px !important;
     }
 
     /* 4. Mobile Responsiveness Overrides */
@@ -43,16 +43,16 @@ st.markdown("""
         .sticky-video { height: 260px; }
         .main .block-container { padding-top: 280px !important; }
         .stVideo { max-height: 160px; }
-        h1 { font-size: 1.2rem !important; }
+        h1 { font-size: 1.1rem !important; margin-bottom: 5px !important; }
     }
 
-    .stVideo { width: 100%; max-width: 480px; border-radius: 15px; }
+    .stVideo { width: 100%; max-width: 480px; border-radius: 12px; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 2. HELPER FUNCTIONS ---
 def clean_input(text, prefix_list):
-    """Strips conversational phrases [cite: 2026-02-11]."""
+    """Strips conversational phrases."""
     clean_text = text.strip()
     for prefix in prefix_list:
         if clean_text.lower().startswith(prefix):
@@ -60,8 +60,8 @@ def clean_input(text, prefix_list):
     return clean_text.rstrip(".")
 
 def save_to_sheets(data):
-    """Sends clean data to Google [cite: 2026-02-12]."""
-    # Your confirmed Version 2 URL
+    """Sends clean data to Google."""
+    # Using your Version 2 URL from Feb 24
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -70,7 +70,7 @@ def save_to_sheets(data):
         st.error(f"Sync Error: {e}")
 
 def speak(text):
-    """Voice engine [cite: 2026-02-09, 2026-02-11]."""
+    """Voice engine with dynamic output."""
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
     with open("response.mp3", "rb") as f:
@@ -92,7 +92,7 @@ brain = CompanyBrain()
 st.markdown('<div class="sticky-video">', unsafe_allow_html=True)
 st.title("RUBY - Associated Industries 2027")
 try:
-    # Pointing to the correct file in your GitHub
+    # Points to your confirmed GitHub filename
     video_file = open('kurt_idle.mp4', 'rb') 
     video_bytes = video_file.read()
     st.video(video_bytes)
@@ -138,7 +138,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
         response = f"Got it! I've sent your details to the team. How can I help you with our 2027 range today?"
 
     else:
-        # Pulls from your uploaded products.txt via brain.py [cite: 2026-02-11]
         response = brain.get_answer(user_input, st.session_state.messages)
 
     # Output with Voice and Text
