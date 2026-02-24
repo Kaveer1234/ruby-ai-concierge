@@ -11,31 +11,43 @@ st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* Fix the video to the top of the screen */
+    /* 1. Fix the Header/Video to the top */
+    [data-testid="stHeader"] {
+        z-index: 0;
+    }
+    
     .sticky-video {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        z-index: 999;
+        height: 380px; /* Fixed height for video area */
+        z-index: 9999;
         background-color: white;
-        padding: 10px 0;
-        border-bottom: 2px solid #f0f2f6;
+        padding: 10px;
+        border-bottom: 3px solid #f0f2f6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
-    /* Add padding to the top of the chat so it doesn't hide under the video */
+
+    /* 2. Force the chat history to start BELOW the video and stay there */
     .main .block-container {
-        padding-top: 350px !important;
+        margin-top: 380px !important; 
+        padding-top: 20px !important;
     }
+
+    /* 3. Mobile specific height adjustments */
+    @media (max-width: 600px) {
+        .sticky-video { height: 300px; }
+        .main .block-container { margin-top: 300px !important; }
+        .stVideo { max-height: 180px; }
+    }
+
     .stVideo { 
         width: 100% !important; 
-        max-width: 600px; 
-        margin: 0 auto; 
-        display: block;
+        max-width: 500px; 
         border-radius: 15px; 
-    }
-    @media (max-width: 600px) {
-        .main .block-container { padding-top: 280px !important; }
-        .stChatMessage { font-size: 14px !important; }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -134,5 +146,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.write(response)
         speak(response)
     st.session_state.messages.append({"role": "assistant", "content": response})
+
 
 
