@@ -1,151 +1,85 @@
 import streamlit as st
-import time
 import requests
-import re
-from gtts import gTTS
+from datetime import datetime
+from brain import CompanyBrain
+
+# --- HELPER FUNCTIONS ---
+def clean_input(text, prefix_list):
+    """Strips conversational phrases to keep data clean for the sheet [cite: 2026-02-11]."""
+    clean_text = text.strip()
+    for prefix in prefix_list:
+        if clean_text.lower().startswith(prefix):
+            clean_text = clean_text[len(prefix):].strip()
+    # Remove trailing punctuation like full stops
+    if clean_text.endswith("."):
+        clean_text = clean_text[:-1]
+    return clean_text
+
+def save_to_sheets(data):
+    """Sends lead data to your Google Apps Script URL [cite: 2026-02-12]."""
+    # PASTE YOUR WEB APP URL HERE
+    webhook_url = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE"
+    try:
+        data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        requests.post(webhook_url, json=data)
+    except Exception as e:
+        print(f"Error saving to sheets: {e}")
 
 # --- INITIALIZATION ---
-if "brain" not in st.session_state:
-    try:
-        from brain import CompanyBrain
-        st.session_state.brain = CompanyBrain()
-    except Exception as e:
-        st.error("Ruby's brain is offline.")
-        st.session_state.brain = None
+if "step" not in st.session_state:
+    st.session_state.step = "name"
+    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": "", "Product": "", "Quantity": "", "Colours": "", "Budget": ""}
+    st.session_state.messages = []
 
-    st.session_state.chat_history = [{"role": "assistant", "content": "Good day! I am RUBY. To assist me in giving you a good service, I would require a few details about you. May I start with your name?"}]
-    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
-    st.session_state.quote_data = {"Product": "", "Quantity": "", "Colours": "", "Budget": ""}
-    st.session_state.quote_step = 0
-    st.session_state.is_talking = False
-    st.session_state.last_text = ""
-    st.session_state.mail_sent = False
+brain = CompanyBrain()
 
-st.set_page_config(page_title="Associated Industries", layout="wide")
+st.title("RUBY - Associated Industries 2027")
 
-# --- UPDATED GOOGLE SHEETS FUNCTION ---
-def send_to_office(data, subject):
-    # Your Unique Google Web App URL [cite: 2026-02-09]
-    url = "https://script.google.com/macros/s/AKfycbyPQB6SIQS836QcdVXwGbWkNtKkkbX2V-eHYteW4ghbVgYbkC-bJ7XZUNmtKnD_qihTIg/exec"
-    try: 
-        # Sending as params ensures the 'doPost(e)' script catches every field [cite: 2026-02-12]
-        requests.post(url, params=data, timeout=10)
-    except: 
-        pass
+# --- CHAT INTERFACE ---
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
 
-# --- UI ---
-with st.sidebar:
-    st.markdown("### Ruby: Digital Concierge")
-    video = "kurt_talking.mp4" if st.session_state.is_talking else "kurt_idle.mp4"
-    st.video(video, autoplay=True, loop=True, muted=True)
-    st.divider()
-    current_name = st.session_state.lead_data['Name'] or 'Guest'
-    st.write(f"**Chatting with:** {current_name}")
+if user_input := st.chat_input("Type your message here..."):
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.write(user_input)
 
-st.title("Associated Industries (PTY) Ltd")
-chat_box = st.container(height=400)
-for msg in st.session_state.chat_history:
-    chat_box.chat_message(msg["role"]).write(msg["content"])
+    response = ""
 
-if prompt := st.chat_input("Message Ruby..."):
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
-    last_ruby = st.session_state.chat_history[-2]["content"].lower()
-    
-    answer = ""
-    
-    # --- INTELLIGENT CLEANING ---
-    clean = prompt.lower()
-    
-    if "your name" in last_ruby:
-        for word in ["hi", "hello", "my name is", "i am", "is my name", "call me", "name is"]:
-            clean = clean.replace(word, "")
-    
-    if "which company" in last_ruby:
-        for word in ["my company is", "the company is", "representing", "we are", "is the company", "from", "company name is", "company is"]:
-            clean = clean.replace(word, "")
-    
-    if "reach you on" in last_ruby:
-        for word in ["my number is", "the number is", "reach me at", "phone number is", "cell number is"]:
-            clean = clean.replace(word, "")
-    
-    clean = clean.strip().title()
+    # --- STEP 1: NAME CAPTURE ---
+    if st.session_state.step == "name":
+        prefixes = ["hi my name is ", "my name is ", "i am ", "this is ", "name is "]
+        st.session_state.lead_data["Name"] = clean_input(user_input, prefixes)
+        st.session_state.step = "company"
+        response = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
 
-    # Listeners
-    if re.search(r'\d{9,}', prompt): 
-        phone_digits = re.sub(r'\D', '', prompt)
-        st.session_state.lead_data["Phone"] = phone_digits
-    
-    if "@" in prompt: st.session_state.lead_data["Email"] = prompt
+    # --- STEP 2: COMPANY CAPTURE ---
+    elif st.session_state.step == "company":
+        prefixes = ["my company is ", "company is ", "i am from ", "representing ", "my company name is "]
+        st.session_state.lead_data["Company"] = clean_input(user_input, prefixes)
+        st.session_state.step = "phone"
+        response = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
 
-    # --- CONVERSATIONAL LOGIC ---
-    if "your name" in last_ruby and not st.session_state.lead_data["Name"]:
-        st.session_state.lead_data["Name"] = clean
-        answer = f"It's a pleasure to meet you, {st.session_state.lead_data['Name']}! Which company are you representing today?"
+    # --- STEP 3: PHONE CAPTURE ---
+    elif st.session_state.step == "phone":
+        st.session_state.lead_data["Phone"] = user_input.strip()
+        st.session_state.step = "email"
+        response = "I've got that. And finally, your work email address? I'll use it to send your 2027 catalog and quotes."
 
-    elif "which company" in last_ruby and not st.session_state.lead_data["Company"]:
-        st.session_state.lead_data["Company"] = clean
-        answer = f"Ah, {st.session_state.lead_data['Company']}! A fantastic organization. Just in case our connection drops, what's the best number to reach you on?"
+    # --- STEP 4: EMAIL CAPTURE & FIRST SAVE ---
+    elif st.session_state.step == "email":
+        st.session_state.lead_data["Email"] = user_input.lower().strip()
+        st.session_state.step = "chat"
+        save_to_sheets(st.session_state.lead_data) # Initial lead save [cite: 2026-02-12]
+        response = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2027 range here: https://www.associatedindustries.co.za/catalog2027.pdf. How can I help you today?"
 
-    elif "reach you on" in last_ruby and not st.session_state.lead_data["Email"]:
-        answer = "I've got that. And finally, your work email address? I'll use it to send your 2027 catalog and quotes."
+    # --- STEP 5: GENERAL CHAT & QUOTING ---
+    else:
+        response = brain.get_answer(user_input, st.session_state.messages)
+        # If the brain detects quote intent, you can update lead_data and call save_to_sheets(st.session_state.lead_data) again.
 
-    elif "@" in prompt and not st.session_state.mail_sent:
-        st.session_state.lead_data["Email"] = prompt
-        cat_url = "https://www.brabysebooks.co.za/outreach/calendaranddiaryshowcase/mobile/index.html#p=1"
-        answer = f"Perfect, {st.session_state.lead_data['Name']}. I've got your details! You can view our 2027 range here: {cat_url}. How can I help you today?"
-        # Trigger Google Sheet Save [cite: 2026-02-12]
-        send_to_office(st.session_state.lead_data, "NEW LEAD")
-        st.session_state.mail_sent = True
-
-    # --- QUOTE WORKFLOW ---
-    elif any(x in prompt.lower() for x in ["quote", "price"]) and st.session_state.quote_step == 0:
-        st.session_state.quote_step = 1
-        answer = "I'd be absolutely delighted to help with a quote! Which specific product or diary code are you interested in?"
-
-    elif st.session_state.quote_step == 1:
-        st.session_state.quote_data["Product"] = prompt
-        st.session_state.quote_step = 2
-        answer = f"The {prompt}? Excellent choice. How many units were you looking to order for your team?"
-
-    elif st.session_state.quote_step == 2:
-        st.session_state.quote_data["Quantity"] = prompt
-        st.session_state.quote_step = 3
-        answer = f"Got it, {prompt} units. For the branding, are we looking at a single-color logo or something more vibrant like foiling?"
-
-    elif st.session_state.quote_step == 3:
-        st.session_state.quote_data["Colours"] = prompt
-        st.session_state.quote_step = 4
-        answer = "Almost there! Do you have a rough budget in mind? It helps me find the best value for you."
-
-    elif st.session_state.quote_step == 4:
-        st.session_state.quote_data["Budget"] = prompt
-        st.session_state.quote_step = 0
-        # Save Full Quote to Google Sheet [cite: 2026-02-12]
-        send_to_office({**st.session_state.lead_data, **st.session_state.quote_data}, "FULL QUOTE")
-        answer = "Wonderful! I've sent that request to our specialists. Is there anything else I can assist with, perhaps our branch locations?"
-
-    # --- BRAIN FALLBACK ---
-    if not answer:
-        if st.session_state.brain:
-            answer = st.session_state.brain.get_answer(prompt, st.session_state.chat_history)
-        else:
-            answer = "I'm right here! What can I tell you about our 2027 range?"
-
-    st.session_state.last_text = answer
-    st.session_state.chat_history.append({"role": "assistant", "content": answer})
-    
-    # Voice Gen
-    voice_text = re.sub(r'[\*\#\_]', '', answer)
-    gTTS(text=voice_text, lang='en', tld='co.uk').save("response.mp3")
-    st.session_state.is_talking = True
-    st.rerun()
-
-if st.session_state.is_talking:
-    st.audio("response.mp3", autoplay=True)
-    # GOLD STANDARD WAIT [cite: 2026-02-11]
-    wait_time = (len(st.session_state.last_text) / 9) + 4.5
-    time.sleep(min(wait_time, 25))
-    st.session_state.is_talking = False
-    st.rerun()
-
-
+    # Display RUBY's response
+    with st.chat_message("assistant"):
+        st.write(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
