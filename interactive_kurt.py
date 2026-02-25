@@ -7,44 +7,44 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: INTEGRATED HEADER LOCK ---
+# --- 1. UI SETUP: FIXED TOP-DOCK LAYOUT ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 st.markdown("""
 <style>
+/* Hide default Streamlit clutter */
 header {visibility: hidden;}
 [data-testid="stHeader"] {display: none;}
 footer {visibility: hidden;}
 
-/* THE INTEGRATED LOCK: Putting title and video in one fixed box */
-.ruby-header {
+/* THE DOCK: Pinned to top with NO overlap on content */
+.ruby-dock {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 280px; /* Increased height for both */
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    background: rgba(255,255,255,0.85);
-    z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    padding-top: 15px;
+    top: 0; left: 0; width: 100%;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    border-bottom: 2px solid #f0f2f6;
+    padding: 10px 0;
+    text-align: center;
 }
 
 .ruby-title { 
-    font-size: 1.3rem; 
-    font-weight: 600; 
-    margin-bottom: 10px; 
-    color: #333;
+    font-size: 1.2rem; 
+    font-weight: 700; 
+    color: #1E1E1E;
+    margin-bottom: 5px;
 }
 
-/* Push chat content below the new integrated height */
+/* IMPORTANT: Push the entire chat area DOWN so it starts AFTER the video */
 .main .block-container {
-    padding-top: 300px !important;
-    padding-bottom: 110px !important;
+    padding-top: 380px !important; 
+    padding-bottom: 100px !important;
 }
 
-/* Mobile Adjustments */
+/* Mobile responsive padding */
 @media (max-width: 768px) {
-    .ruby-header { height: 220px; }
-    .main .block-container { padding-top: 240px !important; }
+    .main .block-container { padding-top: 320px !important; }
     .ruby-title { font-size: 1rem; }
 }
 </style>
@@ -75,35 +75,37 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. RENDER INTEGRATED HEADER ---
-# We use st.empty() to act as a window into our fixed CSS div
-header_window = st.empty()
-
-with header_window.container():
-    # Opening the fixed CSS wrapper
-    st.markdown('<div class="ruby-header">', unsafe_allow_html=True)
-    st.markdown('<div class="ruby-title">RUBY – Associated Industries 2027</div>', unsafe_allow_html=True)
+# --- 4. RENDER PINNED HEADER & VIDEO ---
+# This placeholder stays at the top of the script
+with st.container():
+    # Title Box
+    st.markdown("""
+        <div class="ruby-dock">
+            <div class="ruby-title">RUBY – Associated Industries 2027</div>
+        </div>
+    """, unsafe_allow_html=True)
     
-    # Rendering video directly inside the fixed area
-    # Note: Streamlit wraps st.video in its own div, but CSS will keep it pinned
-    cols = st.columns([1, 1.5, 1]) # Narrower video container
-    with cols[1]:
-        st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+    # Video Box (Floating below title but pinned by the CSS padding)
+    # We use a fixed-position container for the video specifically
+    video_html = f"""
+        <div style="position: fixed; top: 50px; left: 0; width: 100%; z-index: 9999; display: flex; justify-content: center; background: white; padding-bottom: 10px;">
+            <div style="width: 350px;">
+    """
+    st.markdown(video_html, unsafe_allow_html=True)
+    st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
-# --- 5. CHAT LOGIC ---
+# --- 5. CHAT HISTORY ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+# --- 6. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    
-    # Switch to talking avatar
     st.session_state.avatar = "kurt_talking.mp4"
     
-    # Lead Gen logic [cite: 2026-02-12]
+    # Lead Gen Flow [cite: 2026-02-12]
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -120,14 +122,14 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! I've logged those details. How can I help you today?"
+        response = "Perfect! How can I help you today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
 
-# Audio and Idle Reset
+# Audio and Reset
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
     speak(st.session_state.messages[-1]["content"])
     time.sleep(1.5)
