@@ -7,7 +7,7 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: THE SCROLL-LOCK ARCHITECTURE ---
+# --- 1. UI SETUP: THE THREE-BLOCK LOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 def get_video_base64(file_path):
@@ -27,7 +27,7 @@ header {{visibility: hidden;}}
 [data-testid="stHeader"] {{display: none;}}
 footer {{visibility: hidden;}}
 
-/* THE STICKY HEADER: Absolute top lock [cite: 2026-02-11] */
+/* 1. HEADER BLOCK: Strictly fixed at 380px height */
 .ruby-header {{
     position: fixed;
     top: 0; left: 0; width: 100%;
@@ -39,34 +39,40 @@ footer {{visibility: hidden;}}
     padding-top: 10px;
 }}
 
-/* THE CHAT AREA: Forced to live BETWEEN header and input [cite: 2026-02-11] */
+/* 2. CHAT CONTAINER: This is the middle slice you requested [cite: 2026-02-11] */
 .main .block-container {{
-    padding-top: 400px !important; /* Safety gap below video */
-    padding-bottom: 150px !important; /* Safety gap above input bar */
-    max-width: 800px;
-    margin: 0 auto;
+    /* Starts 2mm (approx 8px) below the header's 380px bottom */
+    padding-top: 388px !important; 
+    padding-bottom: 100px !important;
+    max-height: 100vh;
+    overflow-y: auto !important;
 }}
 
-/* THE VIDEO REFRESH: Ensures the swap works instantly [cite: 2026-02-11] */
+/* 3. INPUT BLOCK: Pinned to bottom */
+[data-testid="stChatInput"] {{
+    position: fixed;
+    bottom: 30px;
+    z-index: 1001;
+    background: white;
+}}
+
 video {{
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }}
 </style>
 
 <div class="ruby-header">
-    <div style="font-family:sans-serif; font-weight:700; font-size:1.3rem; margin-bottom:10px;">
-        RUBY – Associated Industries 2027
-    </div>
-    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
+    <div style="font-family:sans-serif; font-weight:700; margin-bottom:5px;">RUBY – Associated Industries 2027</div>
+    <video width="460" autoplay loop muted playsinline key="{st.session_state.avatar}">
         <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGIC & DATA PIPELINE ---
+# --- 2. LEAD GEN & BRAIN ---
 def save_to_sheets(data):
-    # Fixed Webhook with timeout [cite: 2026-02-12]
+    # Ensure lead capture is sent to the webhook [cite: 2026-02-12]
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
@@ -89,12 +95,12 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. CHAT HISTORY ---
+# --- 4. CHAT DISPLAY ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# --- 5. CHAT LOGIC ---
+# --- 5. LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.session_state.avatar = "kurt_talking.mp4"
@@ -115,12 +121,12 @@ if user_input := st.chat_input("Talk to RUBY..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data) # Send data here! [cite: 2026-02-12]
+        save_to_sheets(st.session_state.lead_data)
         response = "Perfect! I've logged those details. How can I help you today?"
     else:
-        # CONTEXT INJECTION: Tell RUBY who she's talking to so she doesn't forget [cite: 2026-02-12]
-        user_info = f"[Lead info: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}] "
-        response = brain.get_answer(user_info + user_input, st.session_state.messages)
+        # Contextual Memory [cite: 2026-02-11]
+        mem = f"User is {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
+        response = brain.get_answer(mem + user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
