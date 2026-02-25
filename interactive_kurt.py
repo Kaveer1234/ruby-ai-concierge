@@ -7,63 +7,63 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: THE STICKER LOCK ---
+# --- 1. UI SETUP: THE STICKER LOCK REFINED ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
-# We convert the video to a data URI so it can be played inside a raw HTML div
+# Function to encode current avatar state [cite: 2026-02-11]
 def get_video_base64(file_path):
-    with open(file_path, "rb") as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
+    try:
+        with open(file_path, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+    except: return ""
 
-video_base64 = get_video_base64(st.session_state.get("avatar", "kurt_idle.mp4"))
+# Initialize avatar if not set
+if "avatar" not in st.session_state:
+    st.session_state.avatar = "kurt_idle.mp4"
+
+current_video_hex = get_video_base64(st.session_state.avatar)
 
 st.markdown(f"""
 <style>
-/* Hide standard UI */
 header {{visibility: hidden;}}
 [data-testid="stHeader"] {{display: none;}}
 footer {{visibility: hidden;}}
 
-/* THE STICKER: This is pinned to the browser window, NOT the page [cite: 2026-02-11] */
+/* THE STICKER: Pinned, but with a transparent background for the chat to be seen behind it */
 .fixed-header {{
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 380px;
-    background-color: white;
-    z-index: 999999; /* Higher than anything else */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border-bottom: 2px solid #f0f2f6;
+    top: 0; left: 0; width: 100%;
+    height: 400px;
+    background: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
+    backdrop-filter: blur(10px);
+    z-index: 999999;
+    display: flex; flex-direction: column; align-items: center;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
     padding-top: 10px;
 }}
 
 .ruby-title {{
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1E1E1E;
-    margin-bottom: 10px;
-    font-family: sans-serif;
+    font-size: 1.2rem; font-weight: 700; color: #1E1E1E;
+    margin-bottom: 10px; font-family: sans-serif;
 }}
 
-/* Push chat content down so it doesn't hide behind the sticker [cite: 2026-02-11] */
+/* THE CHAT SAFETY ZONE: Massive padding to ensure chat starts BELOW the video [cite: 2026-02-11] */
 .main .block-container {{
-    padding-top: 400px !important;
+    padding-top: 420px !important; 
+    padding-bottom: 120px !important;
 }}
 
 video {{
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    background: black;
 }}
 </style>
 
 <div class="fixed-header">
     <div class="ruby-title">RUBY – Associated Industries 2027</div>
-    <video width="450" autoplay loop muted playsinline>
-        <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+    <video width="480" autoplay loop muted playsinline>
+        <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
 """, unsafe_allow_html=True)
@@ -89,12 +89,10 @@ if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
     st.session_state.messages = []
-    st.session_state.avatar = "kurt_idle.mp4"
 
 brain = CompanyBrain()
 
 # --- 4. CHAT HISTORY ---
-# The chat bubbles will now scroll and disappear UNDER the fixed header
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
@@ -102,9 +100,9 @@ for message in st.session_state.messages:
 # --- 5. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.avatar = "kurt_talking.mp4"
+    st.session_state.avatar = "kurt_talking.mp4" # Trigger talking [cite: 2026-02-11]
     
-    # Lead Gen Flow [cite: 2026-02-12]
+    # Lead Gen logic [cite: 2026-02-12]
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -121,14 +119,14 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! How can I help you today?"
+        response = "Perfect! I've got your details. How can I help you today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
 
-# Audio and Reset
+# Audio and Reset to Idle [cite: 2026-02-11]
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
     speak(st.session_state.messages[-1]["content"])
     time.sleep(1.5)
