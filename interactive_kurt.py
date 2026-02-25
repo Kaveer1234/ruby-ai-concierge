@@ -7,7 +7,7 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: PREMIUM VIEWPORT LOCK ---
+# --- 1. UI SETUP: INTEGRATED HEADER LOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 st.markdown("""
@@ -16,37 +16,36 @@ header {visibility: hidden;}
 [data-testid="stHeader"] {display: none;}
 footer {visibility: hidden;}
 
-/* THE LOCK: Absolute pinning of the blurred header */
+/* THE INTEGRATED LOCK: Putting title and video in one fixed box */
 .ruby-header {
     position: fixed;
-    top: 0; left: 0; width: 100%; height: 230px;
+    top: 0; left: 0; width: 100%; height: 280px; /* Increased height for both */
     backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-    background: rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.85);
     z-index: 9999;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     border-bottom: 1px solid rgba(0,0,0,0.06);
+    padding-top: 15px;
 }
 
-.ruby-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
+.ruby-title { 
+    font-size: 1.3rem; 
+    font-weight: 600; 
+    margin-bottom: 10px; 
+    color: #333;
+}
 
-/* Push chat below the fixed header */
+/* Push chat content below the new integrated height */
 .main .block-container {
-    padding-top: 250px !important;
+    padding-top: 300px !important;
     padding-bottom: 110px !important;
 }
 
-.typing span {
-    height: 8px; width: 8px; margin: 0 2px;
-    background-color: #999; border-radius: 50%;
-    display: inline-block;
-    animation: bounce 1.4s infinite ease-in-out both;
-}
-@keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
-
+/* Mobile Adjustments */
 @media (max-width: 768px) {
-    .ruby-header { height: 170px; }
-    .main .block-container { padding-top: 190px !important; }
-    .ruby-title { font-size: 1.1rem; }
+    .ruby-header { height: 220px; }
+    .main .block-container { padding-top: 240px !important; }
+    .ruby-title { font-size: 1rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -67,45 +66,44 @@ def speak(text):
         st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     os.remove("response.mp3")
 
-# --- 3. INITIALIZATION (Includes v_key fix) ---
+# --- 3. INITIALIZATION ---
 if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
     st.session_state.messages = []
     st.session_state.avatar = "kurt_idle.mp4"
-    st.session_state.v_key = 0 # This ensures session state exists [cite: 2026-02-11]
 
 brain = CompanyBrain()
 
-# --- 4. THE HEADER RENDER (Rendered exactly once per run) ---
-st.markdown(f"""
-    <div class="ruby-header">
-        <div class="ruby-title">RUBY – Associated Industries 2027</div>
-    </div>
-""", unsafe_allow_html=True)
+# --- 4. RENDER INTEGRATED HEADER ---
+# We use st.empty() to act as a window into our fixed CSS div
+header_window = st.empty()
 
-# We place the video inside the header area using a clean container
-with st.container():
-    # Adding a small spacer to center inside the fixed div
-    st.markdown('<div style="height:40px;"></div>', unsafe_allow_html=True)
-    cols = st.columns([1, 2, 1])
+with header_window.container():
+    # Opening the fixed CSS wrapper
+    st.markdown('<div class="ruby-header">', unsafe_allow_html=True)
+    st.markdown('<div class="ruby-title">RUBY – Associated Industries 2027</div>', unsafe_allow_html=True)
+    
+    # Rendering video directly inside the fixed area
+    # Note: Streamlit wraps st.video in its own div, but CSS will keep it pinned
+    cols = st.columns([1, 1.5, 1]) # Narrower video container
     with cols[1]:
         st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 5. CHAT HISTORY ---
+# --- 5. CHAT LOGIC ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# --- 6. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # 1. Update state to Talking
+    # Switch to talking avatar
     st.session_state.avatar = "kurt_talking.mp4"
     
-    # 2. Logic for lead capture
-    response = ""
+    # Lead Gen logic [cite: 2026-02-12]
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -122,19 +120,16 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! How can I help you today?"
+        response = "Perfect! I've logged those details. How can I help you today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
-    
-    # Rerun once to show the user message and start Ruby talking
     st.rerun()
 
-# This handles the voice and the "return to idle" logic after a rerun
+# Audio and Idle Reset
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
-    last_response = st.session_state.messages[-1]["content"]
-    speak(last_response)
-    time.sleep(2.0)
+    speak(st.session_state.messages[-1]["content"])
+    time.sleep(1.5)
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
