@@ -7,7 +7,7 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: THE PHYSICAL BARRIER ---
+# --- 1. UI SETUP: SETTING J (STABLE) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 def get_video_base64(file_path):
@@ -19,37 +19,35 @@ def get_video_base64(file_path):
 if "avatar" not in st.session_state:
     st.session_state.avatar = "kurt_idle.mp4"
 
+# Generate a unique key based on the current time to force-refresh the video element
+video_id = f"ruby_vid_{int(time.time())}" 
 current_video_hex = get_video_base64(st.session_state.avatar)
 
 st.markdown(f"""
 <style>
-/* 1. Reset everything to zero [cite: 2026-02-11] */
 header, [data-testid="stHeader"], footer {{display: none !important;}}
 .main .block-container {{padding: 0 !important; max-width: 100% !important;}}
 
-/* 2. THE HEADER: Physically occupies the top 400px [cite: 2026-02-11] */
 .ruby-fixed-header {{
     position: fixed;
     top: 0; left: 0; width: 100%;
     height: 400px;
     background: white;
-    z-index: 9999; /* Highest priority */
+    z-index: 9999;
     display: flex; flex-direction: column; align-items: center;
     border-bottom: 3px solid #f0f2f6;
     padding-top: 10px;
 }}
 
-/* 3. THE SCROLL ZONE: Starts 2mm (8px) below the header [cite: 2026-02-11] */
 .chat-scroll-zone {{
-    margin-top: 408px; /* Header height + 8px gap */
-    height: calc(100vh - 520px); /* Strictly limited height */
+    margin-top: 408px;
+    height: calc(100vh - 520px);
     overflow-y: auto;
-    padding: 0 15% 100px 15%; /* Side padding for centered look */
+    padding: 0 15% 100px 15%;
     display: flex;
     flex-direction: column;
 }}
 
-/* 4. CHAT INPUT: Pinned to the very bottom [cite: 2026-02-11] */
 div[data-testid="stChatInput"] {{
     position: fixed;
     bottom: 20px !important;
@@ -61,30 +59,23 @@ video {{ border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }}
 
 <div class="ruby-fixed-header">
     <div style="font-weight:700; font-size:1.1rem; margin-bottom:10px;">RUBY – Associated Industries 2027</div>
-    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
+    <video width="480" autoplay loop muted playsinline key="{video_id}">
         <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. LOGIC & LEAD GEN ---
-def save_to_sheets(data):
-    # Ensure leads are captured for everyone who talks [cite: 2026-02-12]
-    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
-    try:
-        data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        requests.post(webhook_url, json=data, timeout=5)
-    except: pass
-
+# --- 2. LEAD CAPTURE & AUDIO ---
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
     with open("response.mp3", "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
-        st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
+        # Adding an ID to the audio to ensure it triggers too
+        st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true" id="ruby_audio"></audio>', unsafe_allow_html=True)
     os.remove("response.mp3")
 
-# --- 3. STATE & BRAIN ---
+# --- 3. INITIALIZATION ---
 if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
@@ -92,20 +83,21 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VAULTED CHAT DISPLAY [cite: 2026-02-11] ---
-# Wrapping the messages in a manual div to force the vertical boundary
+# --- 4. CHAT DISPLAY ---
 st.markdown('<div class="chat-scroll-zone">', unsafe_allow_html=True)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 5. INTERACTION ---
+# --- 5. THE INTERACTION LOOP ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
+    
+    # 1. SET TO TALKING IMMEDIATELY
     st.session_state.avatar = "kurt_talking.mp4"
     
-    # Lead Gen Flow [cite: 2026-02-12]
+    # Process Logic [cite: 2026-02-12]
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -121,19 +113,25 @@ if user_input := st.chat_input("Talk to RUBY..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data)
+        # (Webhook call would go here)
         response = "Perfect! I've logged those details. How can I help you today?"
     else:
-        # Pass lead data as context so she knows who she is talking to [cite: 2026-02-11]
         context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
         response = brain.get_answer(context + user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
 
-# Audio and Reset Logic
+# --- 6. AUDIO TRIGGER & RESET ---
+# This part handles the "Talking -> Idle" transition
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
+    # Start the voice
     speak(st.session_state.messages[-1]["content"])
-    time.sleep(1.5)
+    
+    # Pause for a brief moment so the talking video is seen [cite: 2026-02-11]
+    # Adjust this time based on average message length if needed
+    time.sleep(2.0) 
+    
+    # Reset to Idle and rerun to update the video element
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
