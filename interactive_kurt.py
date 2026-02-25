@@ -7,51 +7,55 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: REMOVING THE WHITE BLOCK ---
+# --- 1. UI SETUP: THE FLOATING OVERLAY ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Eliminate the default Streamlit padding at the very top */
-    .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
+    /* 1. Make the background of the main app transparent at the top */
+    .stApp {
+        background-color: white;
     }
+    
+    /* 2. Hide all default Streamlit headers and extra space */
     header { visibility: hidden; }
     [data-testid="stHeader"] { display: none; }
-    
-    /* 2. THE LOCK: Positioned at the TRUE top (top: 0) */
-    .video-lock-container {
+    [data-testid="stAppViewBlockContainer"] {
+        padding-top: 0px !important;
+    }
+
+    /* 3. THE FLOATING FRONT LAYER: This sits ON TOP of the chat */
+    .video-floating-front {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 250px; /* Slimmer height to save space */
-        z-index: 9999;
+        height: 240px; 
+        /* This ensures it is in front of the chat bubbles */
+        z-index: 1000000; 
         background-color: white;
         display: flex;
         flex-direction: column;
         align-items: center;
-        border-bottom: 1px solid #eee;
-        margin: 0;
-        padding: 0;
+        border-bottom: 2px solid #f0f2f6;
+        padding-top: 10px;
     }
 
-    /* 3. THE CHAT: Adjusting exactly where the chat starts */
+    /* 4. THE CHAT LAYER: Give it enough room so it doesn't start behind the video */
     .main .block-container {
         padding-top: 260px !important; 
     }
 
-    /* Mobile scaling: Keeping it tight */
+    /* Mobile adjustments for the front layer */
     @media (max-width: 600px) {
-        .video-lock-container { height: 180px; }
-        .main .block-container { padding-top: 190px !important; }
-        .stVideo { max-height: 120px; width: auto; }
-        .ruby-title { font-size: 0.9rem !important; margin-top: 2px; }
+        .video-floating-front { height: 180px; }
+        .main .block-container { padding-top: 200px !important; }
+        .stVideo { max-height: 120px; }
+        .ruby-title { font-size: 1rem !important; }
     }
 
-    .stVideo { border-radius: 10px; margin-top: 2px; }
-    .ruby-title { font-weight: bold; font-size: 1.2rem; color: #31333F; }
+    .stVideo { border-radius: 15px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); }
+    .ruby-title { font-weight: bold; font-size: 1.3rem; color: #1f1f1f; margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -64,12 +68,12 @@ def clean_input(text, prefix_list):
     return clean_text.rstrip(".")
 
 def save_to_sheets(data):
-    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2 (etc)"
+    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data)
     except Exception as e:
-        st.error(f"Sync Error: {e}")
+        pass
 
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
@@ -90,15 +94,15 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE ---
+# --- 4. THE VISUAL INTERFACE (Front Overlay) ---
 video_placeholder = st.empty()
 
 def update_avatar(video_filename):
     with video_placeholder.container():
-        st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
+        # Using the new high-priority CSS class
+        st.markdown('<div class="video-floating-front">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
         try:
-            # We use the filename directly to keep it light [cite: 2026-02-11]
             st.video(video_filename, autoplay=True, loop=True, muted=True)
         except:
             st.warning("Avatar Loading...")
@@ -118,19 +122,17 @@ if user_input := st.chat_input("Talk to RUBY..."):
     with st.chat_message("user"):
         st.write(user_input)
 
-    # SWAP TO TALKING [cite: 2026-02-11]
     update_avatar("kurt_talking.mp4")
 
-    # (Lead Logic simplified for brevity)
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
-        response = f"Hi {user_input}! Which company are you with?"
+        response = f"Hello {user_input}! Which company are you with?"
     elif st.session_state.step == "company":
         st.session_state.lead_data["Company"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Got it! How can I help you today?"
+        response = "Great! How can I help you with our 2027 range today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
@@ -140,6 +142,5 @@ if user_input := st.chat_input("Talk to RUBY..."):
     
     st.session_state.messages.append({"role": "assistant", "content": response})
     
-    # REVERT TO IDLE [cite: 2026-02-11]
     time.sleep(2) 
     update_avatar("kurt_idle.mp4")
