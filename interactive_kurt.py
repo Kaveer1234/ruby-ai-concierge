@@ -7,7 +7,6 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: DUAL-VIDEO PRELOAD ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 def get_video_base64(file_path):
@@ -16,17 +15,17 @@ def get_video_base64(file_path):
             return base64.b64encode(f.read()).decode()
     except: return ""
 
-# Pre-encode BOTH videos once per session [cite: 2026-02-11]
+# --- 1. PRELOAD VIDEOS (ONCE) ---
 if "idle_hex" not in st.session_state:
     st.session_state.idle_hex = get_video_base64("kurt_idle.mp4")
     st.session_state.talk_hex = get_video_base64("kurt_talking.mp4")
 
 if "avatar" not in st.session_state:
-    st.session_state.avatar = "idle" # Options: "idle" or "talking"
+    st.session_state.avatar = "idle"
 
-# CSS to show/hide videos based on state
-idle_display = "block" if st.session_state.avatar == "idle" else "none"
-talk_display = "block" if st.session_state.avatar == "talking" else "none"
+# Toggle visibility via CSS [cite: 2026-02-11]
+idle_css = "display: block;" if st.session_state.avatar == "idle" else "display: none;"
+talk_css = "display: block;" if st.session_state.avatar == "talking" else "display: none;"
 
 st.markdown(f"""
 <style>
@@ -53,41 +52,33 @@ header, [data-testid="stHeader"], footer {{display: none !important;}}
     flex-direction: column;
 }}
 
-div[data-testid="stChatInput"] {{
-    position: fixed;
-    bottom: 20px !important;
-    z-index: 10000;
-}}
-
-.vid-container {{
-    width: 480px;
-    height: 270px;
+.vid-stack {{
+    width: 480px; height: 270px;
     position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 12px; overflow: hidden;
+    background: black;
 }}
 
-#idle-vid {{ display: {idle_display}; }}
-#talk-vid {{ display: {talk_display}; }}
+#vid-idle {{ {idle_css} }}
+#vid-talking {{ {talk_css} }}
 
-video {{ width: 100%; height: 100%; object-fit: cover; background: black; }}
+video {{ width: 100%; height: 100%; object-fit: cover; }}
 </style>
 
 <div class="ruby-fixed-header">
-    <div style="font-weight:700; font-size:1.1rem; margin-bottom:10px;">RUBY – Associated Industries 2027</div>
-    <div class="vid-container">
-        <video id="idle-vid" autoplay loop muted playsinline>
+    <div style="font-weight:700; margin-bottom:10px;">RUBY – Associated Industries 2027</div>
+    <div class="vid-stack">
+        <video id="vid-idle" autoplay loop muted playsinline>
             <source src="data:video/mp4;base64,{st.session_state.idle_hex}" type="video/mp4">
         </video>
-        <video id="talk-vid" autoplay loop muted playsinline>
+        <video id="vid-talking" autoplay loop muted playsinline>
             <source src="data:video/mp4;base64,{st.session_state.talk_hex}" type="video/mp4">
         </video>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. CORE FUNCTIONS & STATE ---
+# --- 2. THE BRAIN & DATA ---
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
@@ -110,13 +101,12 @@ for message in st.session_state.messages:
         st.write(message["content"])
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 4. THE INTERACTION LOOP ---
+# --- 4. INTERACTION ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
+    st.session_state.avatar = "talking" # Switch BEFORE processing [cite: 2026-02-11]
     
-    # Switch to talking mode immediately
-    st.session_state.avatar = "talking"
-    
+    # Lead Gen Flow
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -132,10 +122,10 @@ if user_input := st.chat_input("Talk to RUBY..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
-        response = "Perfect! I've logged those details. How can I help you today?"
+        response = "Perfect! How can I help you today?"
     else:
-        context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
-        response = brain.get_answer(context + user_input, st.session_state.messages)
+        ctx = f"User is {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
+        response = brain.get_answer(ctx + user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
@@ -143,6 +133,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
 # --- 5. AUDIO & RESET ---
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
     speak(st.session_state.messages[-1]["content"])
-    time.sleep(3.5) # Increased sleep to ensure talk video is seen
+    time.sleep(4.0) # Length of talking animation
     st.session_state.avatar = "idle"
     st.rerun()
