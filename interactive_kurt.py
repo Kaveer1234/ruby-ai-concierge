@@ -7,7 +7,7 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: SPLIT-PANE LOCK ---
+# --- 1. UI SETUP: THE SANDWICH LOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 def get_video_base64(file_path):
@@ -21,13 +21,14 @@ if "avatar" not in st.session_state:
 
 current_video_hex = get_video_base64(st.session_state.avatar)
 
+# This CSS creates a fixed header and a scrollable chat area in the middle [cite: 2026-02-11]
 st.markdown(f"""
 <style>
 header {{visibility: hidden;}}
 [data-testid="stHeader"] {{display: none;}}
 footer {{visibility: hidden;}}
 
-/* HEADER: Fixed at the top, no transparency needed now */
+/* FIXED HEADER */
 .ruby-header {{
     position: fixed;
     top: 0; left: 0; width: 100%;
@@ -41,27 +42,28 @@ footer {{visibility: hidden;}}
 
 .ruby-title {{
     font-size: 1.2rem; font-weight: 700; color: #1E1E1E;
-    margin-bottom: 10px; font-family: sans-serif;
+    margin-bottom: 5px; font-family: sans-serif;
 }}
 
-/* THE CHAT CONTAINER: A scrollable box that stays BELOW the header [cite: 2026-02-11] */
-.chat-scroll-area {{
-    margin-top: 390px; /* Starts exactly where header ends */
-    height: calc(100vh - 500px); /* Fits between header and input box */
-    overflow-y: auto;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
+/* THE SCROLLABLE CHAT CHANNEL [cite: 2026-02-11] */
+/* We target the main container and force it to stay between header and footer */
+.main .block-container {{
+    max-height: calc(100vh - 100px); 
+    overflow-y: auto !important;
+    padding-top: 400px !important; /* Starts below header */
+    padding-bottom: 150px !important; /* Ends above chat input */
 }}
 
-/* Ensure the Streamlit main area doesn't scroll itself */
-.main {{
-    overflow: hidden !important;
+/* Ensure the chat input stays pinned at the very bottom */
+[data-testid="stChatInput"] {{
+    position: fixed;
+    bottom: 20px;
+    z-index: 1001;
 }}
 
 video {{
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }}
 </style>
 
@@ -75,11 +77,13 @@ video {{
 
 # --- 2. HELPER FUNCTIONS ---
 def save_to_sheets(data):
+    # Updated Webhook logic for reliability [cite: 2026-02-12]
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        requests.post(webhook_url, json=data)
-    except: pass
+        r = requests.post(webhook_url, json=data, timeout=10)
+        return r.status_code == 200
+    except: return False
 
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
@@ -97,18 +101,15 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. RENDER CHAT IN SCROLLABLE DIV ---
-# We wrap the chat messages in a custom div [cite: 2026-02-11]
-st.markdown('<div class="chat-scroll-area">', unsafe_allow_html=True)
+# --- 4. CHAT HISTORY ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
-st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 5. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.avatar = "kurt_talking.mp4"
+    st.session_state.avatar = "kurt_talking.mp4" # Toggle video key [cite: 2026-02-11]
     
     # Lead Gen logic [cite: 2026-02-12]
     if st.session_state.step == "name":
@@ -126,9 +127,10 @@ if user_input := st.chat_input("Talk to RUBY..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data)
+        save_to_sheets(st.session_state.lead_data) # Send to Sheets [cite: 2026-02-12]
         response = "Perfect! I've logged those details. How can I help you today?"
     else:
+        # Pass full history to brain to improve quote memory [cite: 2026-02-11]
         response = brain.get_answer(user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
