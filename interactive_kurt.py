@@ -7,21 +7,29 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: SETTING J (STABLE) ---
+# --- 1. UI SETUP: THE IRON VAULT ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
+# Function to get video data [cite: 2026-02-11]
 def get_video_base64(file_path):
     try:
         with open(file_path, "rb") as f:
             return base64.b64encode(f.read()).decode()
     except: return ""
 
-if "avatar" not in st.session_state:
-    st.session_state.avatar = "kurt_idle.mp4"
+# --- 2. INITIALIZATION ---
+if "step" not in st.session_state:
+    st.session_state.step = "name"
+    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
+    st.session_state.messages = []
+    st.session_state.avatar = "kurt_idle.mp4" # Default state
 
-# Generate a unique key based on the current time to force-refresh the video element
-video_id = f"ruby_vid_{int(time.time())}" 
+brain = CompanyBrain()
+
+# Encode the current avatar right now
 current_video_hex = get_video_base64(st.session_state.avatar)
+# Unique key for the HTML element [cite: 2026-02-11]
+video_key = f"vid_{st.session_state.avatar}_{len(st.session_state.messages)}"
 
 st.markdown(f"""
 <style>
@@ -59,29 +67,20 @@ video {{ border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }}
 
 <div class="ruby-fixed-header">
     <div style="font-weight:700; font-size:1.1rem; margin-bottom:10px;">RUBY – Associated Industries 2027</div>
-    <video width="480" autoplay loop muted playsinline key="{video_id}">
+    <video width="480" autoplay loop muted playsinline key="{video_key}">
         <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. LEAD CAPTURE & AUDIO ---
+# --- 3. CORE FUNCTIONS ---
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
     with open("response.mp3", "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
-        # Adding an ID to the audio to ensure it triggers too
-        st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true" id="ruby_audio"></audio>', unsafe_allow_html=True)
+        st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     os.remove("response.mp3")
-
-# --- 3. INITIALIZATION ---
-if "step" not in st.session_state:
-    st.session_state.step = "name"
-    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
-    st.session_state.messages = []
-
-brain = CompanyBrain()
 
 # --- 4. CHAT DISPLAY ---
 st.markdown('<div class="chat-scroll-zone">', unsafe_allow_html=True)
@@ -94,10 +93,9 @@ st.markdown('</div>', unsafe_allow_html=True)
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     
-    # 1. SET TO TALKING IMMEDIATELY
+    # 1. IMMEDIATE SWAP TO TALKING [cite: 2026-02-11]
     st.session_state.avatar = "kurt_talking.mp4"
     
-    # Process Logic [cite: 2026-02-12]
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -113,7 +111,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
-        # (Webhook call would go here)
         response = "Perfect! I've logged those details. How can I help you today?"
     else:
         context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
@@ -122,16 +119,13 @@ if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
 
-# --- 6. AUDIO TRIGGER & RESET ---
-# This part handles the "Talking -> Idle" transition
+# --- 6. AUDIO & RESET ---
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
-    # Start the voice
     speak(st.session_state.messages[-1]["content"])
     
-    # Pause for a brief moment so the talking video is seen [cite: 2026-02-11]
-    # Adjust this time based on average message length if needed
-    time.sleep(2.0) 
+    # Keep talking for a moment while the audio plays
+    time.sleep(3.0) 
     
-    # Reset to Idle and rerun to update the video element
+    # RESET TO IDLE [cite: 2026-02-11]
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
