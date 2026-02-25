@@ -7,56 +7,65 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: SETTING E (REFINED LOCK) ---
+# --- 1. UI SETUP: THE STICKER LOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
-st.markdown("""
+# We convert the video to a data URI so it can be played inside a raw HTML div
+def get_video_base64(file_path):
+    with open(file_path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+video_base64 = get_video_base64(st.session_state.get("avatar", "kurt_idle.mp4"))
+
+st.markdown(f"""
 <style>
-/* Hide standard UI elements */
-header {visibility: hidden;}
-[data-testid="stHeader"] {display: none;}
-footer {visibility: hidden;}
+/* Hide standard UI */
+header {{visibility: hidden;}}
+[data-testid="stHeader"] {{display: none;}}
+footer {{visibility: hidden;}}
 
-/* THE DOCK: Pinned Title */
-.ruby-dock {
+/* THE STICKER: This is pinned to the browser window, NOT the page [cite: 2026-02-11] */
+.fixed-header {{
     position: fixed;
-    top: 0; left: 0; width: 100%;
-    background: white;
-    z-index: 10001;
-    border-bottom: 1px solid #eee;
-    padding: 10px 0;
-    text-align: center;
-}
-
-.ruby-title { font-size: 1.2rem; font-weight: 700; color: #1E1E1E; }
-
-/* THE VIDEO ANCHOR: Targeting the second vertical block specifically [cite: 2026-02-11] */
-[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"]:nth-child(2) {
-    position: fixed !important;
-    top: 45px !important;
+    top: 0;
     left: 0;
     width: 100%;
-    z-index: 10000 !important;
-    background: white !important;
-    padding-bottom: 15px;
-}
+    height: 380px;
+    background-color: white;
+    z-index: 999999; /* Higher than anything else */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-bottom: 2px solid #f0f2f6;
+    padding-top: 10px;
+}}
 
-/* THE CHAT SAFETY ZONE: Adjusted for the fixed elements [cite: 2026-02-11] */
-.main .block-container {
-    padding-top: 420px !important; 
-    padding-bottom: 100px !important;
-}
+.ruby-title {{
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1E1E1E;
+    margin-bottom: 10px;
+    font-family: sans-serif;
+}}
 
-/* Center the video within the fixed container */
-[data-testid="stVideo"] {
-    margin: 0 auto;
-    max-width: 450px;
-}
+/* Push chat content down so it doesn't hide behind the sticker [cite: 2026-02-11] */
+.main .block-container {{
+    padding-top: 400px !important;
+}}
 
-@media (max-width: 768px) {
-    .main .block-container { padding-top: 360px !important; }
-}
+video {{
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}}
 </style>
+
+<div class="fixed-header">
+    <div class="ruby-title">RUBY – Associated Industries 2027</div>
+    <video width="450" autoplay loop muted playsinline>
+        <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+    </video>
+</div>
 """, unsafe_allow_html=True)
 
 # --- 2. HELPER FUNCTIONS ---
@@ -84,20 +93,13 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. RENDER PINNED ELEMENTS ---
-# 1. Title (Element 1)
-st.markdown('<div class="ruby-dock"><div class="ruby-title">RUBY – Associated Industries 2027</div></div>', unsafe_allow_html=True)
-
-# 2. Video Anchor (Element 2 - Locked by CSS)
-with st.container():
-    st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
-
-# --- 5. CHAT HISTORY ---
+# --- 4. CHAT HISTORY ---
+# The chat bubbles will now scroll and disappear UNDER the fixed header
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# --- 6. CHAT LOGIC ---
+# --- 5. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.session_state.avatar = "kurt_talking.mp4"
