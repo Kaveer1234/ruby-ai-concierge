@@ -19,16 +19,17 @@ def get_video_base64(file_path):
 if "avatar" not in st.session_state:
     st.session_state.avatar = "kurt_idle.mp4"
 
+# Force a unique key for the video to trigger a browser refresh [cite: 2026-02-11]
+video_key = f"vid_{st.session_state.avatar}_{len(st.session_state.get('messages', []))}"
 current_video_hex = get_video_base64(st.session_state.avatar)
 
-# This CSS creates a fixed header and a scrollable chat area in the middle [cite: 2026-02-11]
 st.markdown(f"""
 <style>
 header {{visibility: hidden;}}
 [data-testid="stHeader"] {{display: none;}}
 footer {{visibility: hidden;}}
 
-/* FIXED HEADER */
+/* FIXED HEADER: Locked at top */
 .ruby-header {{
     position: fixed;
     top: 0; left: 0; width: 100%;
@@ -40,25 +41,10 @@ footer {{visibility: hidden;}}
     padding-top: 10px;
 }}
 
-.ruby-title {{
-    font-size: 1.2rem; font-weight: 700; color: #1E1E1E;
-    margin-bottom: 5px; font-family: sans-serif;
-}}
-
-/* THE SCROLLABLE CHAT CHANNEL [cite: 2026-02-11] */
-/* We target the main container and force it to stay between header and footer */
+/* THE CHAT ZONE: Scrollable middle ground [cite: 2026-02-11] */
 .main .block-container {{
-    max-height: calc(100vh - 100px); 
-    overflow-y: auto !important;
-    padding-top: 400px !important; /* Starts below header */
-    padding-bottom: 150px !important; /* Ends above chat input */
-}}
-
-/* Ensure the chat input stays pinned at the very bottom */
-[data-testid="stChatInput"] {{
-    position: fixed;
-    bottom: 20px;
-    z-index: 1001;
+    padding-top: 400px !important; 
+    padding-bottom: 120px !important;
 }}
 
 video {{
@@ -68,22 +54,23 @@ video {{
 </style>
 
 <div class="ruby-header">
-    <div class="ruby-title">RUBY – Associated Industries 2027</div>
-    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
+    <div style="font-family:sans-serif; font-weight:700; margin-bottom:10px;">RUBY – Associated Industries 2027</div>
+    <video width="480" autoplay loop muted playsinline key="{video_key}">
         <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
 """, unsafe_allow_html=True)
 
-# --- 2. HELPER FUNCTIONS ---
+# --- 2. LEAD CAPTURE & AUDIO ---
 def save_to_sheets(data):
-    # Updated Webhook logic for reliability [cite: 2026-02-12]
+    # Google App Script Webhook [cite: 2026-02-12]
     webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-        r = requests.post(webhook_url, json=data, timeout=10)
-        return r.status_code == 200
-    except: return False
+        # Use a timeout to prevent the app from hanging if the sheet is slow [cite: 2026-02-12]
+        requests.post(webhook_url, json=data, timeout=5)
+    except Exception as e:
+        print(f"Sheet Error: {e}")
 
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
@@ -109,9 +96,9 @@ for message in st.session_state.messages:
 # --- 5. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.avatar = "kurt_talking.mp4" # Toggle video key [cite: 2026-02-11]
+    st.session_state.avatar = "kurt_talking.mp4"
     
-    # Lead Gen logic [cite: 2026-02-12]
+    # Sequential Lead Capture [cite: 2026-02-12]
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -127,11 +114,12 @@ if user_input := st.chat_input("Talk to RUBY..."):
     elif st.session_state.step == "email":
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data) # Send to Sheets [cite: 2026-02-12]
+        save_to_sheets(st.session_state.lead_data) # Finalize Lead [cite: 2026-02-12]
         response = "Perfect! I've logged those details. How can I help you today?"
     else:
-        # Pass full history to brain to improve quote memory [cite: 2026-02-11]
-        response = brain.get_answer(user_input, st.session_state.messages)
+        # Pass lead data as context so RUBY doesn't "forget" who she is talking to [cite: 2026-02-11]
+        context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
+        response = brain.get_answer(context + user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
@@ -139,6 +127,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
 # Audio and Reset
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
     speak(st.session_state.messages[-1]["content"])
-    time.sleep(1.5)
+    time.sleep(1.5) # Allow speech to start
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
