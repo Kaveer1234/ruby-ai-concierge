@@ -16,6 +16,7 @@ header {visibility: hidden;}
 [data-testid="stHeader"] {display: none;}
 footer {visibility: hidden;}
 
+/* THE LOCK: Absolute pinning of the blurred header */
 .ruby-header {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 230px;
@@ -28,6 +29,7 @@ footer {visibility: hidden;}
 
 .ruby-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 12px; }
 
+/* Push chat below the fixed header */
 .main .block-container {
     padding-top: 250px !important;
     padding-bottom: 110px !important;
@@ -71,38 +73,35 @@ if "step" not in st.session_state:
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
     st.session_state.messages = []
     st.session_state.avatar = "kurt_idle.mp4"
-    st.session_state.v_key = 0 # Initialize a stable key counter [cite: 2026-02-11]
 
 brain = CompanyBrain()
 
-# --- 4. STABLE HEADER RENDER ---
+# --- 4. HEADER RENDER (Removed 'key' to fix TypeError) ---
 header_placeholder = st.empty()
 
 def update_avatar(video_file):
-    # Increment key only when function is called to ensure it is unique but stable [cite: 2026-02-11]
-    st.session_state.v_key += 1 
     header_placeholder.empty()
     with header_placeholder.container():
+        # Using a container here instead of 'key' avoids the TypeError
         st.markdown('<div class="ruby-header">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY – Associated Industries 2027</div>', unsafe_allow_html=True)
-        # Using a controlled integer key prevents the TypeError [cite: 2026-02-11]
-        st.video(video_file, autoplay=True, loop=True, muted=True, key=f"ruby_vid_{st.session_state.v_key}")
+        st.video(video_file, autoplay=True, loop=True, muted=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # Initial draw
 update_avatar(st.session_state.avatar)
 
-# Display Chat History
+# --- 5. CHAT HISTORY & LOGIC ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
-# --- 5. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.write(user_input)
 
+    # SWAP TO TALKING
     update_avatar("kurt_talking.mp4")
 
     with st.chat_message("assistant"):
@@ -111,7 +110,7 @@ if user_input := st.chat_input("Talk to RUBY..."):
 
     time.sleep(1.2)
     
-    # Lead logic [cite: 2026-02-12]
+    # Lead logic
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -128,7 +127,7 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! How can I help you today?"
+        response = "Perfect! I've logged your details. How can I help you today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
@@ -139,6 +138,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
 
     st.session_state.messages.append({"role": "assistant", "content": response})
 
-    # Return to idle with a unique key [cite: 2026-02-11]
+    # Return to idle
     time.sleep(2.0)
     update_avatar("kurt_idle.mp4")
