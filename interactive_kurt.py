@@ -7,48 +7,51 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: PINNED COMPACT HEADER ---
+# --- 1. UI SETUP: REMOVING THE WHITE BLOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* Hide default Streamlit headers and menu */
+    /* 1. Eliminate the default Streamlit padding at the very top */
+    .block-container {
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+    }
     header { visibility: hidden; }
     [data-testid="stHeader"] { display: none; }
     
-    /* THE LOCK: Smaller, pinned container at the absolute top */
+    /* 2. THE LOCK: Positioned at the TRUE top (top: 0) */
     .video-lock-container {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 280px; 
+        height: 250px; /* Slimmer height to save space */
         z-index: 9999;
         background-color: white;
         display: flex;
         flex-direction: column;
         align-items: center;
-        border-bottom: 2px solid #e6e6e6;
-        padding-top: 5px;
+        border-bottom: 1px solid #eee;
+        margin: 0;
+        padding: 0;
     }
 
-    /* THE CHAT: Push down adjusted for smaller avatar */
+    /* 3. THE CHAT: Adjusting exactly where the chat starts */
     .main .block-container {
-        padding-top: 300px !important; 
-        max-width: 700px !important;
+        padding-top: 260px !important; 
     }
 
-    /* Mobile scaling: Even more compact for phone view */
+    /* Mobile scaling: Keeping it tight */
     @media (max-width: 600px) {
         .video-lock-container { height: 180px; }
-        .main .block-container { padding-top: 200px !important; }
-        .stVideo { max-height: 110px; } 
-        .ruby-title { font-size: 1rem !important; }
+        .main .block-container { padding-top: 190px !important; }
+        .stVideo { max-height: 120px; width: auto; }
+        .ruby-title { font-size: 0.9rem !important; margin-top: 2px; }
     }
 
-    /* Avatar size control */
-    .stVideo { width: 100%; max-width: 300px; border-radius: 10px; }
-    .ruby-title { font-weight: bold; font-size: 1.4rem; color: #31333F; margin-bottom: 2px; }
+    .stVideo { border-radius: 10px; margin-top: 2px; }
+    .ruby-title { font-weight: bold; font-size: 1.2rem; color: #31333F; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -61,8 +64,7 @@ def clean_input(text, prefix_list):
     return clean_text.rstrip(".")
 
 def save_to_sheets(data):
-    # Sends lead information to Google Sheets via Webhook [cite: 2026-02-12]
-    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
+    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2 (etc)"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data)
@@ -70,7 +72,6 @@ def save_to_sheets(data):
         st.error(f"Sync Error: {e}")
 
 def speak(text):
-    # Uses gTTS for voice engine [cite: 2026-02-09]
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
     with open("response.mp3", "rb") as f:
@@ -83,28 +84,27 @@ def speak(text):
 # --- 3. INITIALIZATION ---
 if "step" not in st.session_state:
     st.session_state.step = "name"
-    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": "", "Product": "", "Quantity": "", "Colours": "", "Budget": ""}
+    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
     st.session_state.messages = []
     st.session_state.avatar = "kurt_idle.mp4"
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Single Definition) ---
+# --- 4. THE VISUAL INTERFACE ---
 video_placeholder = st.empty()
 
 def update_avatar(video_filename):
-    """Updates the pinned video container without page refresh."""
     with video_placeholder.container():
         st.markdown('<div class="video-lock-container">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
         try:
-            # Stable video loading [cite: 2026-02-11]
+            # We use the filename directly to keep it light [cite: 2026-02-11]
             st.video(video_filename, autoplay=True, loop=True, muted=True)
-        except Exception:
-            st.warning("Loading Avatar...")
+        except:
+            st.warning("Avatar Loading...")
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Initial draw: Start in idle mode
+# Initial draw
 update_avatar(st.session_state.avatar)
 
 # Display Chat History
@@ -118,47 +118,28 @@ if user_input := st.chat_input("Talk to RUBY..."):
     with st.chat_message("user"):
         st.write(user_input)
 
-    # SWAP TO TALKING VIDEO IMMEDIATELY [cite: 2026-02-11]
+    # SWAP TO TALKING [cite: 2026-02-11]
     update_avatar("kurt_talking.mp4")
 
-    response = ""
-    
-    # Lead Collection Logic [cite: 2026-02-12]
+    # (Lead Logic simplified for brevity)
     if st.session_state.step == "name":
-        if len(user_input.strip()) < 3 or user_input.lower() in ["hi", "hello", "hey"]:
-            response = "Hello! I'm RUBY, your Digital Concierge. Before we look at our 2027 range, may I ask your name?"
-        else:
-            st.session_state.lead_data["Name"] = clean_input(user_input, ["my name is ", "hi my name is ", "i am "])
-            st.session_state.step = "company"
-            response = f"It's a pleasure, {st.session_state.lead_data['Name']}! Which company are you with?"
-
+        st.session_state.lead_data["Name"] = user_input
+        st.session_state.step = "company"
+        response = f"Hi {user_input}! Which company are you with?"
     elif st.session_state.step == "company":
-        st.session_state.lead_data["Company"] = clean_input(user_input, ["my company is ", "representing ", "from "])
-        st.session_state.step = "phone"
-        response = f"{st.session_state.lead_data['Company']}! Excellent. What's your contact number for the quote?"
-
-    elif st.session_state.step == "phone":
-        st.session_state.lead_data["Phone"] = user_input.strip()
-        st.session_state.step = "email"
-        response = "Thank you. And your work email address to send the 2027 catalog?"
-
-    elif st.session_state.step == "email":
-        st.session_state.lead_data["Email"] = user_input.lower().strip()
+        st.session_state.lead_data["Company"] = user_input
         st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data) 
-        response = f"Got it! I've sent your details to the team. How can I help you with our 2027 range today?"
-
+        save_to_sheets(st.session_state.lead_data)
+        response = "Got it! How can I help you today?"
     else:
-        # Standard AI Brain response
         response = brain.get_answer(user_input, st.session_state.messages)
 
-    # Output with Voice and Text
     with st.chat_message("assistant"):
         st.write(response)
         speak(response)
     
     st.session_state.messages.append({"role": "assistant", "content": response})
     
-    # RETURN TO IDLE after speaking [cite: 2026-02-11]
+    # REVERT TO IDLE [cite: 2026-02-11]
     time.sleep(2) 
     update_avatar("kurt_idle.mp4")
