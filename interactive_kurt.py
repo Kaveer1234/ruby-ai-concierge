@@ -7,7 +7,7 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: FIXED TOP-DOCK LAYOUT ---
+# --- 1. UI SETUP: SETTING E WITH SCROLL LOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 st.markdown("""
@@ -17,12 +17,11 @@ header {visibility: hidden;}
 [data-testid="stHeader"] {display: none;}
 footer {visibility: hidden;}
 
-/* THE DOCK: Pinned to top with NO overlap on content */
+/* THE DOCK: Pinned to top */
 .ruby-dock {
     position: fixed;
     top: 0; left: 0; width: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: white;
     z-index: 10000;
     border-bottom: 2px solid #f0f2f6;
     padding: 10px 0;
@@ -36,16 +35,27 @@ footer {visibility: hidden;}
     margin-bottom: 5px;
 }
 
-/* IMPORTANT: Push the entire chat area DOWN so it starts AFTER the video */
+/* THE VIDEO LOCK: This forces the video container to stay put [cite: 2026-02-11] */
+[data-testid="stVerticalBlock"] > div:nth-child(2) {
+    position: fixed;
+    top: 50px;
+    left: 0;
+    width: 100%;
+    z-index: 9999;
+    background: white;
+    padding-bottom: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+/* THE CHAT SAFETY ZONE: Ensuring chat starts below the pinned video [cite: 2026-02-11] */
 .main .block-container {
-    padding-top: 380px !important; 
+    padding-top: 400px !important; 
     padding-bottom: 100px !important;
 }
 
-/* Mobile responsive padding */
 @media (max-width: 768px) {
-    .main .block-container { padding-top: 320px !important; }
-    .ruby-title { font-size: 1rem; }
+    .main .block-container { padding-top: 340px !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -75,25 +85,15 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. RENDER PINNED HEADER & VIDEO ---
-# This placeholder stays at the top of the script
+# --- 4. RENDER PINNED ELEMENTS ---
+# Title
+st.markdown('<div class="ruby-dock"><div class="ruby-title">RUBY – Associated Industries 2027</div></div>', unsafe_allow_html=True)
+
+# Video (The CSS above locks this second element in place)
 with st.container():
-    # Title Box
-    st.markdown("""
-        <div class="ruby-dock">
-            <div class="ruby-title">RUBY – Associated Industries 2027</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Video Box (Floating below title but pinned by the CSS padding)
-    # We use a fixed-position container for the video specifically
-    video_html = f"""
-        <div style="position: fixed; top: 50px; left: 0; width: 100%; z-index: 9999; display: flex; justify-content: center; background: white; padding-bottom: 10px;">
-            <div style="width: 350px;">
-    """
-    st.markdown(video_html, unsafe_allow_html=True)
-    st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    cols = st.columns([1, 1.5, 1])
+    with cols[1]:
+        st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
 
 # --- 5. CHAT HISTORY ---
 for message in st.session_state.messages:
