@@ -7,17 +7,15 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: THE STICKER LOCK REFINED ---
+# --- 1. UI SETUP: SPLIT-PANE LOCK ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
-# Function to encode current avatar state [cite: 2026-02-11]
 def get_video_base64(file_path):
     try:
         with open(file_path, "rb") as f:
             return base64.b64encode(f.read()).decode()
     except: return ""
 
-# Initialize avatar if not set
 if "avatar" not in st.session_state:
     st.session_state.avatar = "kurt_idle.mp4"
 
@@ -29,16 +27,15 @@ header {{visibility: hidden;}}
 [data-testid="stHeader"] {{display: none;}}
 footer {{visibility: hidden;}}
 
-/* THE STICKER: Pinned, but with a transparent background for the chat to be seen behind it */
-.fixed-header {{
+/* HEADER: Fixed at the top, no transparency needed now */
+.ruby-header {{
     position: fixed;
     top: 0; left: 0; width: 100%;
-    height: 400px;
-    background: rgba(255, 255, 255, 0.9); /* Semi-transparent white */
-    backdrop-filter: blur(10px);
-    z-index: 999999;
+    height: 380px;
+    background: white;
+    z-index: 1000;
     display: flex; flex-direction: column; align-items: center;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
+    border-bottom: 2px solid #f0f2f6;
     padding-top: 10px;
 }}
 
@@ -47,22 +44,30 @@ footer {{visibility: hidden;}}
     margin-bottom: 10px; font-family: sans-serif;
 }}
 
-/* THE CHAT SAFETY ZONE: Massive padding to ensure chat starts BELOW the video [cite: 2026-02-11] */
-.main .block-container {{
-    padding-top: 420px !important; 
-    padding-bottom: 120px !important;
+/* THE CHAT CONTAINER: A scrollable box that stays BELOW the header [cite: 2026-02-11] */
+.chat-scroll-area {{
+    margin-top: 390px; /* Starts exactly where header ends */
+    height: calc(100vh - 500px); /* Fits between header and input box */
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}}
+
+/* Ensure the Streamlit main area doesn't scroll itself */
+.main {{
+    overflow: hidden !important;
 }}
 
 video {{
     border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    background: black;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }}
 </style>
 
-<div class="fixed-header">
+<div class="ruby-header">
     <div class="ruby-title">RUBY – Associated Industries 2027</div>
-    <video width="480" autoplay loop muted playsinline>
+    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
         <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
@@ -92,15 +97,18 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. CHAT HISTORY ---
+# --- 4. RENDER CHAT IN SCROLLABLE DIV ---
+# We wrap the chat messages in a custom div [cite: 2026-02-11]
+st.markdown('<div class="chat-scroll-area">', unsafe_allow_html=True)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 5. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.avatar = "kurt_talking.mp4" # Trigger talking [cite: 2026-02-11]
+    st.session_state.avatar = "kurt_talking.mp4"
     
     # Lead Gen logic [cite: 2026-02-12]
     if st.session_state.step == "name":
@@ -119,14 +127,14 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! I've got your details. How can I help you today?"
+        response = "Perfect! I've logged those details. How can I help you today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
 
-# Audio and Reset to Idle [cite: 2026-02-11]
+# Audio and Reset
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
     speak(st.session_state.messages[-1]["content"])
     time.sleep(1.5)
