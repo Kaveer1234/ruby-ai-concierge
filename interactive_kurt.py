@@ -7,140 +7,276 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: THE FLOATING OVERLAY ---
-st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
+# -------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------
+st.set_page_config(
+    page_title="RUBY - Associated Industries",
+    layout="wide"
+)
 
+# -------------------------------------------------
+# GLASS SAAS UI CSS
+# -------------------------------------------------
 st.markdown("""
-    <style>
-    /* 1. Hide the default Streamlit header bar completely */
-    header { visibility: hidden; }
-    [data-testid="stHeader"] { display: none; }
-    
-    /* 2. Remove all top padding from the main app container */
-    [data-testid="stAppViewBlockContainer"] {
-        padding-top: 0px !important;
-        margin-top: 0px !important;
+<style>
+
+/* -------- REMOVE STREAMLIT DEFAULT -------- */
+header {visibility: hidden;}
+[data-testid="stHeader"] {display: none;}
+footer {visibility: hidden;}
+
+[data-testid="stAppViewContainer"] {
+    padding-top: 0rem !important;
+}
+
+[data-testid="stAppViewBlockContainer"] {
+    padding-top: 0rem !important;
+    max-width: 100% !important;
+}
+
+/* -------- FLOATING GLASS HEADER -------- */
+.ruby-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 230px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    background: rgba(255,255,255,0.65);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+.ruby-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.stVideo video {
+    border-radius: 16px;
+    max-height: 150px;
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+
+/* Push chat below header */
+.main .block-container {
+    padding-top: 250px !important;
+    padding-bottom: 100px !important;
+}
+
+/* -------- PIN CHAT INPUT -------- */
+[data-testid="stChatInput"] {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    padding: 12px 20px 20px 20px;
+    border-top: 1px solid #eee;
+    z-index: 9999;
+}
+
+/* -------- TYPING DOTS -------- */
+.typing span {
+    height: 8px;
+    width: 8px;
+    margin: 0 2px;
+    background-color: #999;
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing span:nth-child(1) { animation-delay: -0.32s; }
+.typing span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+    0%, 80%, 100% { transform: scale(0); }
+    40% { transform: scale(1); }
+}
+
+/* -------- FLOATING MIC BUTTON -------- */
+.mic-btn {
+    position: fixed;
+    bottom: 90px;
+    right: 25px;
+    background: black;
+    color: white;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0px 6px 18px rgba(0,0,0,0.2);
+    z-index: 9999;
+}
+
+/* -------- MOBILE -------- */
+@media (max-width: 768px) {
+
+    .ruby-header {
+        height: 170px;
     }
 
-    /* 3. THE FLOATING WINDOW: Pin it to the absolute top of the screen */
-    .floating-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 260px; 
-        background-color: white;
-        /* Massive z-index to stay on top of all chat elements */
-        z-index: 999999; 
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        border-bottom: 2px solid #f0f2f6;
-        box-shadow: 0px 2px 10px rgba(0,0,0,0.05);
-    }
-
-    /* 4. THE CHAT SPACE: Create a permanent gap so chat starts below the floating window */
     .main .block-container {
-        padding-top: 280px !important; 
+        padding-top: 190px !important;
     }
 
-    /* Mobile adjustments: Smaller floating window for phones */
-    @media (max-width: 600px) {
-        .floating-header { height: 190px; }
-        .main .block-container { padding-top: 210px !important; }
-        .stVideo { max-height: 120px; width: auto; }
-        .ruby-title { font-size: 1.1rem !important; }
+    .ruby-title {
+        font-size: 1.1rem;
     }
 
-    .stVideo { border-radius: 12px; }
-    .ruby-title { font-weight: bold; font-size: 1.5rem; color: #1f1f1f; margin-bottom: 8px; }
-    </style>
-    """, unsafe_allow_html=True)
+    .stVideo video {
+        max-height: 110px;
+    }
+}
 
-# --- 2. HELPER FUNCTIONS ---
-def clean_input(text, prefix_list):
-    clean_text = text.strip()
-    for prefix in prefix_list:
-        if clean_text.lower().startswith(prefix):
-            clean_text = clean_text[len(prefix):].strip()
-    return clean_text.rstrip(".")
+</style>
+""", unsafe_allow_html=True)
+
+# Floating mic button (UI only for now)
+st.markdown('<div class="mic-btn">🎤</div>', unsafe_allow_html=True)
+
+# -------------------------------------------------
+# HELPER FUNCTIONS
+# -------------------------------------------------
 
 def save_to_sheets(data):
-    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
+    webhook_url = "YOUR_GOOGLE_SCRIPT_WEBHOOK"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data)
     except:
         pass
 
+
 def speak(text):
     tts = gTTS(text=text, lang='en', tld='co.za')
     tts.save("response.mp3")
     with open("response.mp3", "rb") as f:
-        data = f.read()
-        b64 = base64.b64encode(data).decode()
-        md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>'
-        st.markdown(md, unsafe_allow_html=True)
+        audio_bytes = f.read()
+        b64 = base64.b64encode(audio_bytes).decode()
+        audio_html = f'<audio src="data:audio/mp3;base64,{b64}" autoplay></audio>'
+        st.markdown(audio_html, unsafe_allow_html=True)
     os.remove("response.mp3")
 
-# --- 3. INITIALIZATION ---
+
+def typing_animation():
+    st.markdown("""
+        <div class="typing">
+            <span></span><span></span><span></span>
+        </div>
+    """, unsafe_allow_html=True)
+
+
+# -------------------------------------------------
+# SESSION STATE INIT
+# -------------------------------------------------
+
 if "step" not in st.session_state:
     st.session_state.step = "name"
-    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
+    st.session_state.lead_data = {
+        "Name": "",
+        "Company": "",
+        "Phone": "",
+        "Email": ""
+    }
     st.session_state.messages = []
     st.session_state.avatar = "kurt_idle.mp4"
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Floating Front Window) ---
-# We put this placeholder inside a div with the 'floating-header' class
+# -------------------------------------------------
+# FLOATING HEADER
+# -------------------------------------------------
+
 header_placeholder = st.empty()
 
-def update_avatar(video_filename):
+def update_avatar(video_file):
+    header_placeholder.empty()
     with header_placeholder.container():
-        st.markdown('<div class="floating-header">', unsafe_allow_html=True)
-        st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
-        try:
-            # Removed dynamic keys to prevent TypeError glitch [cite: 2026-02-11]
-            st.video(video_filename, autoplay=True, loop=True, muted=True)
-        except:
-            st.warning("Avatar loading...")
+        st.markdown('<div class="ruby-header">', unsafe_allow_html=True)
+        st.markdown('<div class="ruby-title">RUBY – Associated Industries 2027</div>', unsafe_allow_html=True)
+        st.video(video_file, autoplay=True, loop=True, muted=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-# Initial draw
 update_avatar(st.session_state.avatar)
 
-# Display Chat History (This now starts BELOW the floating window)
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
+# -------------------------------------------------
+# DISPLAY CHAT HISTORY
+# -------------------------------------------------
 
-# --- 5. LOGIC FLOW ---
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
+
+# -------------------------------------------------
+# CHAT INPUT LOGIC
+# -------------------------------------------------
+
 if user_input := st.chat_input("Talk to RUBY..."):
-    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    st.session_state.messages.append(
+        {"role": "user", "content": user_input}
+    )
+
     with st.chat_message("user"):
         st.write(user_input)
 
     update_avatar("kurt_talking.mp4")
 
+    with st.chat_message("assistant"):
+        typing_animation()
+
+    time.sleep(1)
+
+    # Lead capture flow
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
         response = f"Hello {user_input}! Which company are you with?"
+
     elif st.session_state.step == "company":
         st.session_state.lead_data["Company"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
         response = "Great! How can I help you with our 2027 range today?"
+
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
+
+    # Remove typing animation by rerendering message
+    st.session_state.messages.append(
+        {"role": "assistant", "content": response}
+    )
 
     with st.chat_message("assistant"):
         st.write(response)
         speak(response)
-    
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    
-    time.sleep(2) 
+
+    time.sleep(1.5)
     update_avatar("kurt_idle.mp4")
+
+# -------------------------------------------------
+# AUTO SCROLL
+# -------------------------------------------------
+st.markdown("""
+<script>
+window.scrollTo(0, document.body.scrollHeight);
+</script>
+""", unsafe_allow_html=True)
