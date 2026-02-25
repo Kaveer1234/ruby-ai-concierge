@@ -12,50 +12,49 @@ st.set_page_config(page_title="RUBY - Associated Industries", layout="centered")
 
 st.markdown("""
     <style>
-    /* 1. Make the background of the main app transparent at the top */
-    .stApp {
-        background-color: white;
-    }
-    
-    /* 2. Hide all default Streamlit headers and extra space */
+    /* 1. Hide the default Streamlit header bar completely */
     header { visibility: hidden; }
     [data-testid="stHeader"] { display: none; }
+    
+    /* 2. Remove all top padding from the main app container */
     [data-testid="stAppViewBlockContainer"] {
         padding-top: 0px !important;
+        margin-top: 0px !important;
     }
 
-    /* 3. THE FLOATING FRONT LAYER: This sits ON TOP of the chat */
-    .video-floating-front {
+    /* 3. THE FLOATING WINDOW: Pin it to the absolute top of the screen */
+    .floating-header {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        height: 240px; 
-        /* This ensures it is in front of the chat bubbles */
-        z-index: 1000000; 
+        height: 260px; 
         background-color: white;
+        /* Massive z-index to stay on top of all chat elements */
+        z-index: 999999; 
         display: flex;
         flex-direction: column;
         align-items: center;
+        justify-content: center;
         border-bottom: 2px solid #f0f2f6;
-        padding-top: 10px;
+        box-shadow: 0px 2px 10px rgba(0,0,0,0.05);
     }
 
-    /* 4. THE CHAT LAYER: Give it enough room so it doesn't start behind the video */
+    /* 4. THE CHAT SPACE: Create a permanent gap so chat starts below the floating window */
     .main .block-container {
-        padding-top: 260px !important; 
+        padding-top: 280px !important; 
     }
 
-    /* Mobile adjustments for the front layer */
+    /* Mobile adjustments: Smaller floating window for phones */
     @media (max-width: 600px) {
-        .video-floating-front { height: 180px; }
-        .main .block-container { padding-top: 200px !important; }
-        .stVideo { max-height: 120px; }
-        .ruby-title { font-size: 1rem !important; }
+        .floating-header { height: 190px; }
+        .main .block-container { padding-top: 210px !important; }
+        .stVideo { max-height: 120px; width: auto; }
+        .ruby-title { font-size: 1.1rem !important; }
     }
 
-    .stVideo { border-radius: 15px; box-shadow: 0px 4px 15px rgba(0,0,0,0.1); }
-    .ruby-title { font-weight: bold; font-size: 1.3rem; color: #1f1f1f; margin-bottom: 5px; }
+    .stVideo { border-radius: 12px; }
+    .ruby-title { font-weight: bold; font-size: 1.5rem; color: #1f1f1f; margin-bottom: 8px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -72,7 +71,7 @@ def save_to_sheets(data):
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data)
-    except Exception as e:
+    except:
         pass
 
 def speak(text):
@@ -94,24 +93,25 @@ if "step" not in st.session_state:
 
 brain = CompanyBrain()
 
-# --- 4. THE VISUAL INTERFACE (Front Overlay) ---
-video_placeholder = st.empty()
+# --- 4. THE VISUAL INTERFACE (Floating Front Window) ---
+# We put this placeholder inside a div with the 'floating-header' class
+header_placeholder = st.empty()
 
 def update_avatar(video_filename):
-    with video_placeholder.container():
-        # Using the new high-priority CSS class
-        st.markdown('<div class="video-floating-front">', unsafe_allow_html=True)
+    with header_placeholder.container():
+        st.markdown('<div class="floating-header">', unsafe_allow_html=True)
         st.markdown('<div class="ruby-title">RUBY - Associated Industries 2027</div>', unsafe_allow_html=True)
         try:
+            # Removed dynamic keys to prevent TypeError glitch [cite: 2026-02-11]
             st.video(video_filename, autoplay=True, loop=True, muted=True)
         except:
-            st.warning("Avatar Loading...")
+            st.warning("Avatar loading...")
         st.markdown('</div>', unsafe_allow_html=True)
 
 # Initial draw
 update_avatar(st.session_state.avatar)
 
-# Display Chat History
+# Display Chat History (This now starts BELOW the floating window)
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
