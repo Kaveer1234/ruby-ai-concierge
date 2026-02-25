@@ -67,50 +67,45 @@ def speak(text):
         st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     os.remove("response.mp3")
 
-# --- 3. INITIALIZATION ---
+# --- 3. INITIALIZATION (Includes v_key fix) ---
 if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
     st.session_state.messages = []
     st.session_state.avatar = "kurt_idle.mp4"
+    st.session_state.v_key = 0 # This ensures session state exists [cite: 2026-02-11]
 
 brain = CompanyBrain()
 
-# --- 4. HEADER RENDER (Removed 'key' to fix TypeError) ---
-header_placeholder = st.empty()
+# --- 4. THE HEADER RENDER (Rendered exactly once per run) ---
+st.markdown(f"""
+    <div class="ruby-header">
+        <div class="ruby-title">RUBY – Associated Industries 2027</div>
+    </div>
+""", unsafe_allow_html=True)
 
-def update_avatar(video_file):
-    header_placeholder.empty()
-    with header_placeholder.container():
-        # Using a container here instead of 'key' avoids the TypeError
-        st.markdown('<div class="ruby-header">', unsafe_allow_html=True)
-        st.markdown('<div class="ruby-title">RUBY – Associated Industries 2027</div>', unsafe_allow_html=True)
-        st.video(video_file, autoplay=True, loop=True, muted=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+# We place the video inside the header area using a clean container
+with st.container():
+    # Adding a small spacer to center inside the fixed div
+    st.markdown('<div style="height:40px;"></div>', unsafe_allow_html=True)
+    cols = st.columns([1, 2, 1])
+    with cols[1]:
+        st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
 
-# Initial draw
-update_avatar(st.session_state.avatar)
-
-# --- 5. CHAT HISTORY & LOGIC ---
+# --- 5. CHAT HISTORY ---
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.write(message["content"])
 
+# --- 6. CHAT LOGIC ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    with st.chat_message("user"):
-        st.write(user_input)
-
-    # SWAP TO TALKING
-    update_avatar("kurt_talking.mp4")
-
-    with st.chat_message("assistant"):
-        typing = st.empty()
-        typing.markdown('<div class="typing"><span></span><span></span><span></span></div>', unsafe_allow_html=True)
-
-    time.sleep(1.2)
     
-    # Lead logic
+    # 1. Update state to Talking
+    st.session_state.avatar = "kurt_talking.mp4"
+    
+    # 2. Logic for lead capture
+    response = ""
     if st.session_state.step == "name":
         st.session_state.lead_data["Name"] = user_input
         st.session_state.step = "company"
@@ -127,17 +122,19 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! I've logged your details. How can I help you today?"
+        response = "Perfect! How can I help you today?"
     else:
         response = brain.get_answer(user_input, st.session_state.messages)
 
-    typing.empty()
-    with st.chat_message("assistant"):
-        st.write(response)
-        speak(response)
-
     st.session_state.messages.append({"role": "assistant", "content": response})
+    
+    # Rerun once to show the user message and start Ruby talking
+    st.rerun()
 
-    # Return to idle
+# This handles the voice and the "return to idle" logic after a rerun
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "kurt_talking.mp4":
+    last_response = st.session_state.messages[-1]["content"]
+    speak(last_response)
     time.sleep(2.0)
-    update_avatar("kurt_idle.mp4")
+    st.session_state.avatar = "kurt_idle.mp4"
+    st.rerun()
