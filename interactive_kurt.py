@@ -7,55 +7,54 @@ import os
 import time
 from brain import CompanyBrain
 
-# --- 1. UI SETUP: SETTING E WITH SCROLL LOCK ---
+# --- 1. UI SETUP: SETTING E (REFINED LOCK) ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
 st.markdown("""
 <style>
-/* Hide default Streamlit clutter */
+/* Hide standard UI elements */
 header {visibility: hidden;}
 [data-testid="stHeader"] {display: none;}
 footer {visibility: hidden;}
 
-/* THE DOCK: Pinned to top */
+/* THE DOCK: Pinned Title */
 .ruby-dock {
     position: fixed;
     top: 0; left: 0; width: 100%;
     background: white;
-    z-index: 10000;
-    border-bottom: 2px solid #f0f2f6;
+    z-index: 10001;
+    border-bottom: 1px solid #eee;
     padding: 10px 0;
     text-align: center;
 }
 
-.ruby-title { 
-    font-size: 1.2rem; 
-    font-weight: 700; 
-    color: #1E1E1E;
-    margin-bottom: 5px;
-}
+.ruby-title { font-size: 1.2rem; font-weight: 700; color: #1E1E1E; }
 
-/* THE VIDEO LOCK: This forces the video container to stay put [cite: 2026-02-11] */
-[data-testid="stVerticalBlock"] > div:nth-child(2) {
-    position: fixed;
-    top: 50px;
+/* THE VIDEO ANCHOR: Targeting the second vertical block specifically [cite: 2026-02-11] */
+[data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"]:nth-child(2) {
+    position: fixed !important;
+    top: 45px !important;
     left: 0;
     width: 100%;
-    z-index: 9999;
-    background: white;
-    padding-bottom: 10px;
-    display: flex;
-    justify-content: center;
+    z-index: 10000 !important;
+    background: white !important;
+    padding-bottom: 15px;
 }
 
-/* THE CHAT SAFETY ZONE: Ensuring chat starts below the pinned video [cite: 2026-02-11] */
+/* THE CHAT SAFETY ZONE: Adjusted for the fixed elements [cite: 2026-02-11] */
 .main .block-container {
-    padding-top: 400px !important; 
+    padding-top: 420px !important; 
     padding-bottom: 100px !important;
 }
 
+/* Center the video within the fixed container */
+[data-testid="stVideo"] {
+    margin: 0 auto;
+    max-width: 450px;
+}
+
 @media (max-width: 768px) {
-    .main .block-container { padding-top: 340px !important; }
+    .main .block-container { padding-top: 360px !important; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -86,14 +85,12 @@ if "step" not in st.session_state:
 brain = CompanyBrain()
 
 # --- 4. RENDER PINNED ELEMENTS ---
-# Title
+# 1. Title (Element 1)
 st.markdown('<div class="ruby-dock"><div class="ruby-title">RUBY – Associated Industries 2027</div></div>', unsafe_allow_html=True)
 
-# Video (The CSS above locks this second element in place)
+# 2. Video Anchor (Element 2 - Locked by CSS)
 with st.container():
-    cols = st.columns([1, 1.5, 1])
-    with cols[1]:
-        st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
+    st.video(st.session_state.avatar, autoplay=True, loop=True, muted=True)
 
 # --- 5. CHAT HISTORY ---
 for message in st.session_state.messages:
