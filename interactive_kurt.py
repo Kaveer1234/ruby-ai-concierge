@@ -25,28 +25,36 @@ if "avatar" not in st.session_state:
     st.session_state.avatar = "idle"
 
 # --- 2. GOOGLE SHEETS FUNCTION ---
-def update_google_sheets(data):
+def update_google_sheets(data, lead_type="Initial"):
     try:
+        # Define the scope for Google Sheets
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         
-        # Pulls the secret info directly from Streamlit
+        # Pulls the service account info from your Streamlit Secrets vault
         creds_dict = st.secrets["gcp_service_account"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
         
+        # Authorize and open your specific sheet
         client = gspread.authorize(creds)
-        # Ensure this name matches your sheet exactly
         sheet = client.open("Ruby Leads 2026").sheet1
         
+        # Prepare the row with the data and the lead_type label
         row = [
-            data.get("Name", ""), data.get("Company", ""), 
-            data.get("Phone", ""), data.get("Email", ""),
-            data.get("Product", ""), data.get("Quantity", ""), 
-            data.get("Colours", ""), data.get("Budget", ""),
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            data.get("Name", ""), 
+            data.get("Company", ""), 
+            data.get("Phone", ""), 
+            data.get("Email", ""),
+            data.get("Product", ""), 
+            data.get("Quantity", ""), 
+            data.get("Colours", ""), 
+            data.get("Budget", ""),
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            lead_type  # This is the 2nd argument that was causing the crash
         ]
         sheet.append_row(row)
     except Exception as e:
-        st.error(f"Sheet Error: {e}")
+        # Shows any remaining connection issues in your app logs
+        print(f"Sheet Sync Error: {e}")
 
 # --- 3. VIDEO RENDERER (Restoring your perfect layout) ---
 def get_video_base64(file_path):
@@ -149,4 +157,5 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
     time.sleep(4.0) 
     st.session_state.avatar = "idle"
     st.rerun()
+
 
