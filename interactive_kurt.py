@@ -8,9 +8,15 @@ from brain import CompanyBrain
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- 1. INITIALIZATION (Must be at the very top to prevent the AttributeError) ---
+# --- 1. INITIALIZE BINS (Stops the crash in image_349145.png) ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
+if "lead_data" not in st.session_state:
+    st.session_state.lead_data = {
+        "Name": "", "Company": "", "Phone": "", "Email": "",
+        "Product": "", "Quantity": "", "Colours": "", "Budget": ""
+    }
 
 if "step" not in st.session_state:
     st.session_state.step = "name"
@@ -145,3 +151,4 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
     time.sleep(4.0) 
     st.session_state.avatar = "idle"
     st.rerun()
+
