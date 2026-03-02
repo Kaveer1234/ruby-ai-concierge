@@ -33,8 +33,8 @@ class CompanyBrain:
                     print(f"Error loading {file_path}: {e}")
         return combined_text
 
-    def get_answer(self, user_query, history):
-        # Extract dynamic name from the context injected by app.py
+def get_answer(self, user_query, history):
+        # 1. Extract name
         user_name = "there"
         if "User is " in user_query:
             try:
@@ -42,7 +42,7 @@ class CompanyBrain:
             except:
                 user_name = "there"
 
-        # Context window for product lookup
+        # 2. Context logic
         context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2027 range."
         
         system_prompt = f"""
@@ -51,7 +51,7 @@ class CompanyBrain:
         
         DYNAMIC RULES:
         1. Address the user by their name: {user_name}.
-        2. Use the KNOWLEDGE BASE to answer product questions (Posters, Calendars, etc).
+        2. Use the KNOWLEDGE BASE to answer product questions.
         3. Branches: Joburg (Heriotdale) and Durban (Pinetown).
         4. ABSOLUTELY NO MARKDOWN (no stars, no bold). Keep it under 50 words.
         5. If a product isn't found, offer a specialist callback.
@@ -63,17 +63,27 @@ class CompanyBrain:
         messages.append({"role": "user", "content": user_query})
             
         try:
-            if not self.client: raise Exception("Offline")
+            if not self.client: 
+                # This triggers if st.secrets["GROQ_API_KEY"] is missing
+                raise Exception("Groq Client not initialized. Check your Streamlit Secrets.")
+            
             completion = self.client.chat.completions.create(
                 model=self.model, messages=messages, temperature=0.7, max_tokens=250
             )
             return completion.choices[0].message.content
-        except:
+
+        except Exception as e:
+            # THIS IS THE TRUTH TELLER: It shows the real error in the logs
+            print(f"!!! BRAIN ERROR: {e}")
+            
             # --- DYNAMIC FALLBACKS ---
             q = user_query.lower()
             if "jumbo" in q or "poster" in q:
-                return f"Yes {user_name}, our Jumbo Posters are very popular! They are 900 by 580mm. Shall I get a quote for you?"
+                return f"Yes {user_name}, our Jumbo Posters are 900 by 580mm. Shall I get a quote?"
             if "multisheet" in q:
-                return f"We certainly do, {user_name}! Our 2027 Multisheet range is breathtaking. Shall I get a price for you?"
+                return f"We certainly do, {user_name}! Our Multisheet range is breathtaking. Shall I get a price?"
+            
+            # This is the line she was stuck on because the API call above failed
             return f"I've noted that, {user_name}! I'm just pulling up the latest 2027 catalog details for you. What else can I help you find?"
+
 
