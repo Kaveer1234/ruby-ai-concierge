@@ -1,10 +1,10 @@
 import streamlit as st
 from groq import Groq
 import os
+import fitz  # PyMuPDF for reading PDFs
 
 class CompanyBrain:
     def __init__(self):
-        # Connect to your Streamlit Secrets
         self.api_key = st.secrets.get("GROQ_API_KEY")
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
@@ -15,7 +15,24 @@ class CompanyBrain:
         ]
         self.knowledge_base = self._load_library()
 
-    # Ensure this is spelled exactly 'get_answer' and is indented
+    # --- THE MISSING FUNCTION ---
+    def _load_library(self):
+        text = ""
+        for file_path in self.library_files:
+            if not os.path.exists(file_path):
+                continue
+            if file_path.endswith(".pdf"):
+                try:
+                    doc = fitz.open(file_path)
+                    for page in doc:
+                        text += page.get_text()
+                except Exception as e:
+                    print(f"Error loading PDF {file_path}: {e}")
+            else:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    text += f.read()
+        return text
+
     def get_answer(self, user_query, history):
         user_name = "there"
         if "User is " in user_query:
@@ -24,6 +41,7 @@ class CompanyBrain:
             except:
                 user_name = "there"
 
+        # Use the first 12000 characters of your library
         context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2027 range."
         
         system_prompt = f"""
@@ -33,7 +51,7 @@ class CompanyBrain:
         DYNAMIC RULES:
         1. Address the user by their name: {user_name}.
         2. Use the KNOWLEDGE BASE to answer product questions.
-        3. NO MARKDOWN. Keep it under 50 words.
+        3. NO MARKDOWN (no stars, no bold). Keep it under 50 words.
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -47,5 +65,4 @@ class CompanyBrain:
             )
             return completion.choices[0].message.content
         except Exception as e:
-            # Fallback if the API fails
             return f"I've noted that, {user_name}! I'm looking into that for you. What else can I help with?"
