@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ruby-ai-489009",
+  "private_key_id": "80e032a9bb5481d2eefbbdeee821e88ecfb332d4",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDRmQAV+Gh5+QkL\nKgQ7DKy5mcoUNJsTFAunAMarZ3tEqH+mmBi/JczoHnuO0sb/Mx4QtdKO+XDc0VWD\nSRKTUe8TOQ6Pcfwm5tl8vV3eM7AcRpPaAb/Tmn2uItREJO8Hz/9wReDulES8BDk5\n3UbG+6XZmiU+YldFTmvzywGJt8YkfFJLRGoBCkKqsSd5m9KTB2Eb7mFzWR7kRbjW\nNxkfE8FTGf/ecCYhn5qsYqTtNk+9T6VSASdEK1aAwG/WVmngorh2u+gsG17yu0WQ\n2vrqspJ3HJA4yi4LEBrvHUTKSQwK/BAuQacIR/uA1wC09OQFQIcfDlvu4Z5vuQRK\nvg+IEjEzAgMBAAECggEAA32kWjlSaCGlLGntOxyJbefpTS/ZG1a8oPHq3STykSCr\nS5eB5gEXqhAD58uL4+kyiX21vYra/dqArZiUdh6puCy9mNcBp5Y1rhWrUA2VU8s7\nICjiTIBosnNDDMV+s6cbrn+DcQXIJUd+un98c8jyKK8gCqtxn6ZgNuW9J1GHu8jM\nkIyK2m3pns8pIvAlk/aYI4I4cgX3uxmEBuuB/fu5HGNDX7uv5+B0vNNgeNeDX9da\n4vQ/z333Bq1cuooDJ44IqVN17wOzuksAMgJ6tSZn0N7aiNABC+vTmS85G4Krjuqb\nt9/4Lv/5ifKDF510E64StKAkDpqttr2rdoRIQXM8+QKBgQDrYw3MfjPD2AMBkXzN\nb8OE1C1n8f0lXmPnQ7PU7te14H7EEKLF6sctnRszezW5JCKD9tZJiKij5urMMcLl\nofqElm8iI+/xd/miDgdw+gKKD3MTQz0HFa3p11YbwHeONZy6pxTg78bE1tWX35Ms\n/gNesikygZ4D4N/FLR/GD8aR6QKBgQDj88xGRNtouWa+VZWxf6IfGZUgYbeAuCIN\ngyRqa6POcP5/8EPnLUL/WKnDP5RqL+50bYwFUCTgp5TPpGcGog7DVHxS/v2iuJ8L\n/vldsvonxLwJ/uyGjQsOQtudMq4tXbfXWYNOIsmPVp1ee+TlFYK5yxlN1xp8FjSN\nSnmiils8uwKBgAUTNKf1DJ6rWJ0/CsbPIxMJFBWKpR+aImNJFWaA48u7FGCbzzaf\nMj4shfqdLHJachgQSVx6gtBN2UAfzoju7hzPtYOx7KlzIcG5tbVc3pMldCC1MWqm\nsAI7r1KX2rwJMeDgW1XiNZHm4+ILYvv0WhQ/mR3Kp6KDxa9Vorq9elWJAoGAMPWg\nHkeTyH5prt+68xCyxXM9MGNMgn0J81UDcUgFOsXSI7B7JR/3j9h/PcxeGCCLWr5c\noJeCFC5qK97nsekEurderITP/S8iGfV9ob5bNEdxC8SREKUihsGdYboM5vmGDt7O\n8O1P1VWJH04E758bIMSafrmAmr46M06XqW2GAxkCgYBwB1/2iAVWZnnbQwZAuu80\nsQtQ9opaUMUu4CPraSAljBZKfGP/nQj4mtaEpvhTGbZDMte2J2Zh/gMgDzUzjnl0\n5IWi+Tx0hMFnxg5vrg++axhSNPcLIiJ5O9w1JxE1fVxzLzOxs9iYIq3d6R2PR97Z\njnP7gRJOYVjongativUnpw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "ruby-bot@ruby-ai-489009.iam.gserviceaccount.com",
+  "client_id": "117656732964632082799",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/ruby-bot%40ruby-ai-489009.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
