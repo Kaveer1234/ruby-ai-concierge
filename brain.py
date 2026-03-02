@@ -7,7 +7,6 @@ class CompanyBrain:
         self.api_key = os.environ.get("GROQ_API_KEY")
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
-        # Prioritizing the text file for faster, cleaner lookups 
         self.library_files = [
             "library/products.txt", 
             "library/Part1_compressed.pdf", 
@@ -20,7 +19,6 @@ class CompanyBrain:
         for file_path in self.library_files:
             if os.path.exists(file_path):
                 try:
-                    # SMART LOADING: Check if it is a TXT or PDF 
                     if file_path.endswith(".txt"):
                         with open(file_path, "r", encoding="utf-8") as f:
                             combined_text += f.read() + "\n"
@@ -35,12 +33,15 @@ class CompanyBrain:
         return combined_text
 
     def get_answer(self, user_query, history):
+        # Extract dynamic name from the context injected by app.py
         user_name = "there"
-        for msg in history:
-            if "pleasure to meet you, " in msg["content"]:
-                user_name = msg["content"].split("pleasure to meet you, ")[1].split("!")[0]
+        if "User is " in user_query:
+            try:
+                user_name = user_query.split("User is ")[1].split(" from")[0]
+            except:
+                user_name = "there"
 
-        # Use the first 12,000 characters to ensure products.txt is fully included 
+        # Context window for product lookup
         context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2027 range."
         
         system_prompt = f"""
@@ -49,14 +50,15 @@ class CompanyBrain:
         
         DYNAMIC RULES:
         1. Address the user by their name: {user_name}.
-        2. Use the KNOWLEDGE BASE to answer product questions (like Jumbo Posters or Majestically Wild).
+        2. Use the KNOWLEDGE BASE to answer product questions (Posters, Calendars, etc).
         3. Branches: Joburg (Heriotdale) and Durban (Pinetown).
-        4. No Markdown. Keep it under 50 words.
-        5. If a product isn't in the knowledge base, offer to have a specialist call them.
+        4. ABSOLUTELY NO MARKDOWN (no stars, no bold). Keep it under 50 words.
+        5. If a product isn't found, offer a specialist callback.
         """
         
         messages = [{"role": "system", "content": system_prompt}]
-        for msg in history[-5:]: messages.append(msg)
+        for msg in history[-5:]: 
+            messages.append(msg)
         messages.append({"role": "user", "content": user_query})
             
         try:
@@ -69,11 +71,7 @@ class CompanyBrain:
             # --- DYNAMIC FALLBACKS ---
             q = user_query.lower()
             if "jumbo" in q or "poster" in q:
-                return f"Yes {user_name}, our Jumbo Posters (Ref: N18) are very popular! They are 900 by 580mm. Would you like a quote?"
-            
+                return f"Yes {user_name}, our Jumbo Posters are very popular! They are 900 by 580mm. Shall I get a quote for you?"
             if "multisheet" in q:
                 return f"We certainly do, {user_name}! Our 2027 Multisheet range is breathtaking. Shall I get a price for you?"
-            
             return f"I've noted that, {user_name}! I'm just pulling up the latest 2027 catalog details for you. What else can I help you find?"
-
-
