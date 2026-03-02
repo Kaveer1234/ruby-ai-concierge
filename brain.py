@@ -1,37 +1,22 @@
 import streamlit as st
 from groq import Groq
 import os
-import fitz  # PyMuPDF for reading PDFs
 
 class CompanyBrain:
     def __init__(self):
         self.api_key = st.secrets.get("GROQ_API_KEY")
         self.client = Groq(api_key=self.api_key) if self.api_key else None
         self.model = "llama-3.3-70b-versatile"
-        self.library_files = [
-            "library/products.txt", 
-            "library/Part1_compressed.pdf", 
-            "library/Part2_compressed.pdf"
-        ]
+        # We only need the .txt file now [cite: 1]
+        self.library_file = "library/products.txt"
         self.knowledge_base = self._load_library()
 
-    # --- THE MISSING FUNCTION ---
     def _load_library(self):
-        text = ""
-        for file_path in self.library_files:
-            if not os.path.exists(file_path):
-                continue
-            if file_path.endswith(".pdf"):
-                try:
-                    doc = fitz.open(file_path)
-                    for page in doc:
-                        text += page.get_text()
-                except Exception as e:
-                    print(f"Error loading PDF {file_path}: {e}")
-            else:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    text += f.read()
-        return text
+        # Direct text loading [cite: 1]
+        if os.path.exists(self.library_file):
+            with open(self.library_file, "r", encoding="utf-8") as f:
+                return f.read()
+        return "Associated Industries 2027 range."
 
     def get_answer(self, user_query, history):
         user_name = "there"
@@ -41,16 +26,14 @@ class CompanyBrain:
             except:
                 user_name = "there"
 
-        # Use the first 12000 characters of your library
-        context = self.knowledge_base[:12000] if self.knowledge_base else "Associated Industries 2027 range."
-        
+        # Ruby now uses your products.txt content here [cite: 1]
         system_prompt = f"""
-        ROLE: You are RUBY, a sophisticated Digital Concierge for Associated Industries.
-        KNOWLEDGE BASE: {context}
+        ROLE: You are RUBY, a professional Digital Concierge for Associated Industries.
+        KNOWLEDGE BASE: {self.knowledge_base}
         
         DYNAMIC RULES:
         1. Address the user by their name: {user_name}.
-        2. Use the KNOWLEDGE BASE to answer product questions.
+        2. Use the KNOWLEDGE BASE to answer product questions (Posters, Diaries, etc).
         3. NO MARKDOWN (no stars, no bold). Keep it under 50 words.
         """
         
@@ -65,4 +48,4 @@ class CompanyBrain:
             )
             return completion.choices[0].message.content
         except Exception as e:
-            return f"I've noted that, {user_name}! I'm looking into that for you. What else can I help with?"
+            return f"I've noted that, {user_name}! Let me check our 2027 range for you. What else can I help with?"
