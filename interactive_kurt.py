@@ -4,7 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import brain
 
-# --- 1. INITIALIZE ---
+# --- 1. INITIALIZE (VERSION D STANDARD) ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "lead_data" not in st.session_state:
@@ -12,11 +12,11 @@ if "lead_data" not in st.session_state:
 if "step" not in st.session_state:
     st.session_state.step = "name"
 
-# --- 2. GOOGLE SHEETS FUNCTION ---
+# --- 2. GOOGLE SHEETS FUNCTION (HIDDEN BACKEND) ---
 def update_google_sheets(data):
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        # Ensure creds.json is exactly as downloaded from Google
+        # Uses the creds.json you confirmed is on GitHub
         creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
         client = gspread.authorize(creds)
         sheet = client.open("Ruby Leads 2026").sheet1
@@ -28,17 +28,20 @@ def update_google_sheets(data):
         ]
         sheet.append_row(row)
     except Exception as e:
-        st.error(f"Sheet Sync Error: {e}") # This will show the error in the app for debugging
+        print(f"Sheet Error: {e}")
 
-# --- 3. LAYOUT (Restored to Gold Standard) ---
+# --- 3. LAYOUT (YOUR EXACT VERSION D) ---
 st.set_page_config(layout="wide")
+st.title("RUBY – Associated Industries 2027")
 
-# This creates the top-left image placement
-col1, col2 = st.columns([1, 2])
+col1, col2 = st.columns([1, 1]) # Standard 50/50 split from Version D
 
 with col1:
-    st.image("ruby_image.jpg") # Use your actual image filename here
-    st.title("RUBY – Associated Industries 2027")
+    # Restored your exact video logic
+    if st.session_state.get("is_talking"):
+        st.video("kurt_talking.mp4", autoplay=True)
+    else:
+        st.video("kurt_idle.mp4", autoplay=True, loop=True)
 
 with col2:
     # Display chat history
@@ -49,7 +52,7 @@ with col2:
     if user_input := st.chat_input("Type here..."):
         st.session_state.messages.append({"role": "user", "content": user_input})
         
-        # Lead Generation Flow
+        # --- LEAD FLOW LOGIC ---
         if st.session_state.step == "name":
             st.session_state.lead_data["Name"] = user_input
             st.session_state.step = "company"
@@ -69,15 +72,14 @@ with col2:
             st.session_state.lead_data["Email"] = user_input
             st.session_state.step = "chat"
             response = "Perfect! How can I help you today?"
+            # 🚀 SYNC INITIAL CONTACT
             update_google_sheets(st.session_state.lead_data)
             
         else:
-            # Replaced 'get_answer' with a generic call—check your brain.py function name!
-            try:
-                response = brain.get_answer(user_input, st.session_state.messages)
-            except AttributeError:
-                response = "I'm having trouble connecting to my brain. Please check the function name in brain.py."
+            # Reverted to your original brain call
+            response = brain.get_answer(user_input, st.session_state.messages)
             
+            # Update sheet if they ask for a quote
             if any(word in user_input.lower() for word in ["quote", "calendar", "all"]):
                 st.session_state.lead_data["Product"] = user_input
                 update_google_sheets(st.session_state.lead_data)
