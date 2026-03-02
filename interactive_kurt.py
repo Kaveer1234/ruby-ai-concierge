@@ -6,8 +6,35 @@ from gtts import gTTS
 import os
 import time
 from brain import CompanyBrain
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
+
+# --- GOOGLE SHEETS INTEGRATION ---
+def update_google_sheets(data):
+    try:
+        # Define the scope and link the credentials file
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        # Ensure 'creds.json' is in your main project folder
+        creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
+        client = gspread.authorize(creds)
+        
+        # Open your sheet by name - Ensure this matches your Google Sheet exactly!
+        sheet = client.open("Ruby_Leads_2027").sheet1 
+        
+        # Prepare the row with a timestamp
+        row = [
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            data["Name"], 
+            data["Company"], 
+            data["Phone"], 
+            data["Email"]
+        ]
+        sheet.append_row(row)
+        print("✅ Lead pushed to Google Sheets successfully.")
+    except Exception as e:
+        print(f"❌ Google Sheets Error: {e}")
 
 def get_video_base64(file_path):
     try:
@@ -23,7 +50,7 @@ if "idle_hex" not in st.session_state:
 if "avatar" not in st.session_state:
     st.session_state.avatar = "idle"
 
-# Toggle visibility via CSS [cite: 2026-02-11]
+# Toggle visibility via CSS
 idle_css = "display: block;" if st.session_state.avatar == "idle" else "display: none;"
 talk_css = "display: block;" if st.session_state.avatar == "talking" else "display: none;"
 
@@ -104,7 +131,7 @@ st.markdown('</div>', unsafe_allow_html=True)
 # --- 4. INTERACTION ---
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.avatar = "talking" # Switch BEFORE processing [cite: 2026-02-11]
+    st.session_state.avatar = "talking"
     
     # Lead Gen Flow
     if st.session_state.step == "name":
@@ -123,6 +150,10 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         response = "Perfect! How can I help you today?"
+        
+        # 🚀 TRIGGER: Push to Google Sheets now that all contact info is gathered
+        update_google_sheets(st.session_state.lead_data)
+
     else:
         ctx = f"User is {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
         response = brain.get_answer(ctx + user_input, st.session_state.messages)
@@ -133,6 +164,6 @@ if user_input := st.chat_input("Talk to RUBY..."):
 # --- 5. AUDIO & RESET ---
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
     speak(st.session_state.messages[-1]["content"])
-    time.sleep(4.0) # Length of talking animation
+    time.sleep(4.0) # Syncs with Kurt talking animation length
     st.session_state.avatar = "idle"
     st.rerun()
