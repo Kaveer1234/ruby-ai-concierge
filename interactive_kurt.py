@@ -25,13 +25,17 @@ if "avatar" not in st.session_state:
     st.session_state.avatar = "idle"
 
 # --- 2. GOOGLE SHEETS FUNCTION ---
-def update_google_sheets(data, lead_type="Initial"):
+def update_google_sheets(data):
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name('creds.json', scope)
+        
+        # Pulls the secret info directly from Streamlit
+        creds_dict = st.secrets["gcp_service_account"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        
         client = gspread.authorize(creds)
-        # Opens your sheet: Ruby Leads 2026
-        sheet = client.open("Ruby Leads 2026").sheet1 
+        # Ensure this name matches your sheet exactly
+        sheet = client.open("Ruby Leads 2026").sheet1
         
         row = [
             data.get("Name", ""), data.get("Company", ""), 
@@ -42,7 +46,7 @@ def update_google_sheets(data, lead_type="Initial"):
         ]
         sheet.append_row(row)
     except Exception as e:
-        print(f"Sheet Error: {e}")
+        st.error(f"Sheet Error: {e}")
 
 # --- 3. VIDEO RENDERER (Restoring your perfect layout) ---
 def get_video_base64(file_path):
@@ -145,3 +149,4 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
     time.sleep(4.0) 
     st.session_state.avatar = "idle"
     st.rerun()
+
