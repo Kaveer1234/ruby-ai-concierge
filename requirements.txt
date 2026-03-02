@@ -1,5 +1,7 @@
 streamlit
 requests
 gTTS
-groq
+gspread
+oauth2client
 PyPDF2
+groq
