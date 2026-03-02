@@ -1,6 +1,7 @@
 import os
 import PyPDF2
 from groq import Groq
+import streamlit as st # 1. Ensure this is at the top of brain.py
 
 class CompanyBrain:
     def __init__(self):
@@ -75,3 +76,4 @@ class CompanyBrain:
             if "multisheet" in q:
                 return f"We certainly do, {user_name}! Our 2027 Multisheet range is breathtaking. Shall I get a price for you?"
             return f"I've noted that, {user_name}! I'm just pulling up the latest 2027 catalog details for you. What else can I help you find?"
+
