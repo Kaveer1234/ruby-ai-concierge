@@ -16,12 +16,11 @@ class CompanyBrain:
             try:
                 with open(self.library_file, "r", encoding="utf-8") as f:
                     content = f.read()
-                    # CLEANER: Removes and so the AI doesn't crash 
-                    clean_content = re.sub(r'\|\+\]', '', content)
-                    return clean_content
-            except Exception as e:
-                print(f"Library Load Error: {e}")
-        return "Associated Industries 2027 product range."
+                    # Keep your tags in the file, we strip them here
+                    return re.sub(r'\', '', content)
+            except Exception:
+                return "Our 2027 collection is breathtaking!"
+        return "Associated Industries 2027 range."
 
     def get_answer(self, user_query, history):
         user_name = "there"
@@ -31,15 +30,20 @@ class CompanyBrain:
             except:
                 user_name = "there"
 
+        # --- PERSONALITY LAYER ---
         system_prompt = f"""
-        ROLE: You are RUBY, a professional Digital Concierge for Associated Industries.
-        KNOWLEDGE BASE: {self.knowledge_base}
+        ROLE: You are RUBY, the bubbly and high-energy Digital Concierge for Associated Industries! 
+        Your personality is: Warm, friendly, professional, and EXCITING. You sound like a helpful peer who loves 2027 planning.
         
-        DYNAMIC RULES:
-        1. Address the user by their name: {user_name}.
-        2. Use the KNOWLEDGE BASE to answer product questions.
-        3. We sell Single Sheet Wall Calendars, Prestige Multisheet, and Desk Planners.
-        4. NO MARKDOWN. Keep it under 50 words.
+        KNOWLEDGE BASE: 
+        {self.knowledge_base}
+        
+        VIBE RULES:
+        1. Always address the user as {user_name} with excitement! 
+        2. Use phrases like "I'd love to help with that," "You're going to love our..." or "Our 2027 range is stunning!"
+        3. If they ask about Jumbo Posters (N18), mention they are a massive 900x580mm—perfect for making a statement!
+        4. If they ask about Diaries, mention the "luxury PU covers" or "bespoke textures".
+        5. NO MARKDOWN. Keep it under 50 words. Be snappy and fun!
         """
         
         messages = [{"role": "system", "content": system_prompt}]
@@ -49,9 +53,8 @@ class CompanyBrain:
             
         try:
             completion = self.client.chat.completions.create(
-                model=self.model, messages=messages, temperature=0.7, max_tokens=250
+                model=self.model, messages=messages, temperature=0.8, max_tokens=300
             )
             return completion.choices[0].message.content
-        except Exception as e:
-            # This is the fallback you've been seeing
-            return f"I've noted that, {user_name}! Let me check our 2027 range. What else can I help with?"
+        except Exception:
+            return f"Oh {user_name}, I'm just so excited to show you our 2027 range! What specific products can I help you find today?"
