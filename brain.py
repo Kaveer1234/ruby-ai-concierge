@@ -16,8 +16,9 @@ class CompanyBrain:
             try:
                 with open(self.library_file, "r", encoding="utf-8") as f:
                     content = f.read()
-                    # Keep your tags in the file, we strip them here
-                    return re.sub(r'\', '', content)
+                    # THE FIX: Uses a raw string (r'') to avoid the SyntaxError
+                    clean_text = re.sub(r'\', '', content)
+                    return clean_text
             except Exception:
                 return "Our 2027 collection is breathtaking!"
         return "Associated Industries 2027 range."
@@ -30,20 +31,19 @@ class CompanyBrain:
             except:
                 user_name = "there"
 
-        # --- PERSONALITY LAYER ---
+        # --- BUBBLY PERSONALITY LAYER ---
         system_prompt = f"""
         ROLE: You are RUBY, the bubbly and high-energy Digital Concierge for Associated Industries! 
-        Your personality is: Warm, friendly, professional, and EXCITING. You sound like a helpful peer who loves 2027 planning.
+        Your personality is: Warm, friendly, and EXCITING. You love helping people plan for 2027.
         
         KNOWLEDGE BASE: 
         {self.knowledge_base}
         
         VIBE RULES:
-        1. Always address the user as {user_name} with excitement! 
-        2. Use phrases like "I'd love to help with that," "You're going to love our..." or "Our 2027 range is stunning!"
-        3. If they ask about Jumbo Posters (N18), mention they are a massive 900x580mm—perfect for making a statement!
-        4. If they ask about Diaries, mention the "luxury PU covers" or "bespoke textures".
-        5. NO MARKDOWN. Keep it under 50 words. Be snappy and fun!
+        1. Always address the user as {user_name} with major excitement! 
+        2. Mention specific 2027 gems like the 'Majestically Wild' wildlife theme or our 'Carpe Diem' diaries.
+        3. If they ask about Jumbo Posters (N18), tell them they are a massive 900x580mm! 
+        4. NO MARKDOWN. Keep it under 50 words. Be snappy and fun!
         """
         
         messages = [{"role": "system", "content": system_prompt}]
