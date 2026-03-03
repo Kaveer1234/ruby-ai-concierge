@@ -11,8 +11,7 @@ SHEET_NAME = "Leads"
 # -------------------------------
 # Initialize CompanyBrain
 # -------------------------------
-brain = CompanyBrain(
-    library_path=LIBRARY_PATH,
+brain = CompanyBrain(library_path=LIBRARY_PATH),
     creds_path=CREDS_PATH,
     sheet_name=SHEET_NAME
 )
@@ -78,3 +77,4 @@ user_message = st.text_input("Say something to Ruby:")
 if user_message:
     response = brain.respond(user_message)
     st.write(f"Ruby: {response}")
+
