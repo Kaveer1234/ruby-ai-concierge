@@ -7,7 +7,7 @@ class CompanyBrain:
         # SECURE INITIALIZATION:
         # Pulls the key from Streamlit's private vault instead of plain text [cite: 2026-02-12]
         try:
-            self.client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+            self.client = Groq(api_key=st.secrets[GROQ_API_KEY])
         except Exception as e:
             st.error("Missing API Key. Please add GROQ_API_KEY to your Streamlit Secrets.")
             self.client = None
@@ -34,4 +34,5 @@ class CompanyBrain:
             return response.choices[0].message.content
         except Exception as e:
             return f"I encountered an error: {str(e)}"
+
 
