@@ -63,3 +63,4 @@ class CompanyBrain:
             # THIS PRINTS TO YOUR 'MANAGE APP' LOGS
             print(f"!!! RUBY ENGINE ERROR: {e}")
             return f"Oh {user_name}, I'm just so excited to show you our 2027 range! What specific products can I help you find today?"
+
