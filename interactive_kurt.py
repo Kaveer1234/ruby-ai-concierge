@@ -77,3 +77,4 @@ user_message = st.text_input("Say something to Ruby:")
 if user_message:
     response = brain.respond(user_message)
     st.write(f"Ruby: {response}")
+
