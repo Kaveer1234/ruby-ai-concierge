@@ -1,66 +1,151 @@
-import streamlit as st
-from groq import Groq
-import os
 import re
+import os
+import random
+from gtts import gTTS
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
 
 class CompanyBrain:
-    def __init__(self):
-        # 1. CHECK SECRETS: Ensure your key is named GROQ_API_KEY in Streamlit
-        self.api_key = st.secrets.get("GROQ_API_KEY")
-        self.client = Groq(api_key=self.api_key) if self.api_key else None
-        self.model = "llama-3.3-70b-versatile"
-        self.library_file = "library/products.txt"
-        self.knowledge_base = self._load_library()
+    def __init__(self, library_path="library.txt", creds_json="service_account.json", sheet_name="Leads"):
+        # Load the knowledge base from .txt file
+        self.library = self.load_library(library_path)
+        self.last_lead = {}
+        self.last_quote = {}
 
-    def _load_library(self):
-        if os.path.exists(self.library_file):
-            try:
-                with open(self.library_file, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    # Removes both and tags
-                    clean_text = re.sub(r'\[(?:source|cite): [\d, ]+\]', '', content)
-                    return clean_text
-            except Exception as e:
-                print(f"DEBUG: Library Load Error: {e}")
-                return "Error loading products."
-        return "Associated Industries 2027 range."
+        # Setup Google Sheets
+        scope = ["https://spreadsheets.google.com/feeds",
+                 "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_json, scope)
+        client = gspread.authorize(creds)
+        self.sheet = client.open(sheet_name).sheet1
 
-    def get_answer(self, user_query, history):
-        user_name = "there"
-        if "User is " in user_query:
-            try:
-                user_name = user_query.split("User is ")[1].split(" from")[0]
-            except:
-                user_name = "there"
+    # -----------------------------
+    # Library handling
+    # -----------------------------
+    def load_library(self, path):
+        if not os.path.exists(path):
+            print(f"[Warning] Library file {path} not found.")
+            return []
+        with open(path, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f if line.strip()]
+        return lines
 
-        system_prompt = f"""
-        ROLE: You are RUBY, the bubbly and high-energy Digital Concierge for Associated Industries! 
-        Your soul is: Warm, friendly, and professional. 
-        
-        KNOWLEDGE BASE: 
-        {self.knowledge_base}
-        
-        VIBE RULES:
-        1. Always address the user as {user_name} with excitement! 
-        2. Use the KNOWLEDGE BASE to answer. Mention our Jumbo Posters (900x580mm) or Prestige Multisheets.
-        3. NO MARKDOWN. Keep it under 50 words. Be snappy and fun!
+    def search_library(self, user_input):
         """
-        
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in history[-5:]: 
-            messages.append(msg)
-        messages.append({"role": "user", "content": user_query})
-            
-        try:
-            if not self.client:
-                raise Exception("Groq API Client is missing. Check Streamlit Secrets.")
-                
-            completion = self.client.chat.completions.create(
-                model=self.model, messages=messages, temperature=0.6, max_tokens=300
-            )
-            return completion.choices[0].message.content
-        except Exception as e:
-            # THIS PRINTS TO YOUR 'MANAGE APP' LOGS
-            print(f"!!! RUBY ENGINE ERROR: {e}")
-            return f"Oh {user_name}, I'm just so excited to show you our 2027 range! What specific products can I help you find today?"
+        Return a response from the library that matches user input.
+        If none found, return a default friendly response.
+        """
+        user_input_lower = user_input.lower()
+        for line in self.library:
+            if user_input_lower in line.lower():
+                return line
+        # fallback random friendly reply
+        return random.choice([
+            "Oh, that sounds exciting! Let me see how I can help you 😊",
+            "I love helping with that! Can you tell me a bit more?",
+            "Absolutely! I’m on it 💖"
+        ])
 
+    # -----------------------------
+    # Lead capture
+    # -----------------------------
+    def capture_lead(self, field, value):
+        """
+        Capture the lead fields: name, company, phone, email
+        Update Google Sheet immediately when all four are collected.
+        """
+        self.last_lead[field] = value
+
+        required_fields = ["name", "company", "phone", "email"]
+        missing = [f for f in required_fields if f not in self.last_lead]
+
+        if missing:
+            # Ask for next missing field casually
+            next_field = missing[0]
+            return f"Could you please tell me your {next_field}? 🙂"
+        else:
+            # All fields collected → push to Google Sheet
+            self.update_sheet_lead(self.last_lead)
+            # Clear last_lead for next customer
+            self.last_lead = {}
+            return "Thanks so much! I’ve got all your details now. How can I assist you today with our calendars? 🌟"
+
+    def update_sheet_lead(self, lead_data):
+        row = [
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            lead_data.get("name", ""),
+            lead_data.get("company", ""),
+            lead_data.get("phone", ""),
+            lead_data.get("email", "")
+        ]
+        self.sheet.append_row(row)
+
+    # -----------------------------
+    # Quote capture
+    # -----------------------------
+    def capture_quote(self, field, value):
+        """
+        Capture quote info: type, quantity, colors, budget
+        Update Google Sheet immediately when all fields are collected.
+        """
+        self.last_quote[field] = value
+        required_fields = ["type", "quantity", "colors", "budget"]
+        missing = [f for f in required_fields if f not in self.last_quote]
+
+        if missing:
+            next_field = missing[0]
+            prompt = {
+                "type": "Which type of calendar are you interested in? 📅",
+                "quantity": "Great! How many would you like? 📝",
+                "colors": "Perfect! What colors do you want for the overprint? 🎨",
+                "budget": "Got it. If possible, what’s your budget? 💰"
+            }
+            return prompt[next_field]
+        else:
+            # All fields collected → push to Google Sheet
+            self.update_sheet_quote(self.last_quote)
+            self.last_quote = {}
+            return "Awesome! I’ve recorded your quote request. Our team will get back to you shortly. 💖"
+
+    def update_sheet_quote(self, quote_data):
+        row = [
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            quote_data.get("type", ""),
+            quote_data.get("quantity", ""),
+            quote_data.get("colors", ""),
+            quote_data.get("budget", "")
+        ]
+        self.sheet.append_row(row)
+
+    # -----------------------------
+    # Generate response
+    # -----------------------------
+    def generate_response(self, user_input):
+        """
+        Determine whether we are in lead capture, quote capture, or general conversation.
+        """
+        # simple heuristic to detect fields
+        field_map = {
+            "name": ["my name is", "i am", "this is"],
+            "company": ["company", "business", "organisation", "organization"],
+            "phone": ["phone", "tel", "call me", "number"],
+            "email": ["email", "e-mail"],
+            "type": ["calendar", "product type", "type of calendar"],
+            "quantity": ["quantity", "how many", "amount"],
+            "colors": ["colors", "colour", "overprint"],
+            "budget": ["budget", "price range"]
+        }
+
+        # check lead capture first
+        for field in ["name", "company", "phone", "email"]:
+            if any(kw in user_input.lower() for kw in field_map[field]):
+                return self.capture_lead(field, user_input)
+
+        # check quote capture
+        for field in ["type", "quantity", "colors", "budget"]:
+            if any(kw in user_input.lower() for kw in field_map[field]):
+                return self.capture_quote(field, user_input)
+
+        # default to library search / personality response
+        return self.search_library(user_input)
