@@ -1,6 +1,5 @@
-import os
 import streamlit as st
-from company_brain import CompanyBrain  # ensure company_brain.py is in same folder
+from brain import CompanyBrain
 
 # -------------------------------
 # Paths & Sheet
@@ -10,20 +9,7 @@ CREDS_PATH = "secrets/creds.json"
 SHEET_NAME = "Leads"
 
 # -------------------------------
-# Startup checks
-# -------------------------------
-missing_files = []
-if not os.path.exists(LIBRARY_PATH):
-    missing_files.append(f"Library file missing: {LIBRARY_PATH}")
-if not os.path.exists(CREDS_PATH):
-    missing_files.append(f"Credentials file missing: {CREDS_PATH}")
-
-if missing_files:
-    st.error("⚠️ Startup Error:\n" + "\n".join(missing_files))
-    st.stop()
-
-# -------------------------------
-# Initialize Brain
+# Initialize CompanyBrain
 # -------------------------------
 brain = CompanyBrain(
     library_path=LIBRARY_PATH,
@@ -32,61 +18,63 @@ brain = CompanyBrain(
 )
 
 # -------------------------------
-# Streamlit Layout
+# Streamlit App Layout
 # -------------------------------
+
 st.set_page_config(page_title="Ruby AI Concierge", layout="wide")
+
 st.title("💬 Ruby AI Concierge")
 
-# Video section (layout unchanged)
-st.video("video/ruby_intro.mp4")
+# Embed video avatar (idle/talking/thinking)
+video_file = "kurt_idle.mp4"
+st.video(video_file)
+
+# -------------------------------
+# Lead Capture Form
+# -------------------------------
+st.subheader("New Customer Inquiry")
+with st.form("lead_form"):
+    name = st.text_input("Name")
+    company = st.text_input("Company")
+    tel = st.text_input("Telephone")
+    email = st.text_input("Email")
+    submit_lead = st.form_submit_button("Submit Inquiry")
+
+    if submit_lead and name and company and tel and email:
+        brain.add_lead(name, company, tel, email)
+        st.success(f"Thanks {name}! Your info has been captured.")
+
+# -------------------------------
+# Quote Request Form
+# -------------------------------
+st.subheader("Request a Quote")
+with st.form("quote_form"):
+    q_name = st.text_input("Customer Name")
+    q_company = st.text_input("Company Name")
+    q_tel = st.text_input("Telephone")
+    q_email = st.text_input("Email")
+    calendar_type = st.text_input("Type of Calendar")
+    quantity = st.number_input("Quantity", min_value=1)
+    colours = st.text_input("Colours for Overprint")
+    budget = st.text_input("Budget (if known)")
+    submit_quote = st.form_submit_button("Submit Quote")
+
+    if submit_quote and q_name and q_company and q_tel and q_email:
+        lead_info = {
+            "name": q_name,
+            "company": q_company,
+            "tel": q_tel,
+            "email": q_email
+        }
+        brain.add_quote(lead_info, calendar_type, quantity, colours, budget)
+        st.success(f"Quote request submitted for {q_name}!")
 
 # -------------------------------
 # Chat Section
 # -------------------------------
-st.subheader("💡 Chat with Ruby")
-user_input = st.text_input("You:", key="chat_input")
-if st.button("Send", key="send_btn") and user_input:
-    response = brain.respond(user_input)
-    st.text_area("Ruby:", value=response, height=100)
+st.subheader("Chat with Ruby")
+user_message = st.text_input("Say something to Ruby:")
 
-# -------------------------------
-# Lead capture form
-# -------------------------------
-with st.form("lead_form", clear_on_submit=True):
-    st.subheader("👋 Let's get started!")
-    name = st.text_input("Your Name", key="lead_name")
-    company = st.text_input("Company", key="lead_company")
-    phone = st.text_input("Phone", key="lead_phone")
-    email = st.text_input("Email", key="lead_email")
-    submit_lead = st.form_submit_button("Submit Lead")
-    if submit_lead:
-        brain.add_lead(name, company, phone, email)
-        st.success("✅ Lead submitted!")
-
-# -------------------------------
-# Quote request form
-# -------------------------------
-with st.form("quote_form", clear_on_submit=True):
-    st.subheader("📅 Request a Quote")
-    q_name = st.text_input("Name", key="quote_name")
-    q_company = st.text_input("Company", key="quote_company")
-    q_phone = st.text_input("Phone", key="quote_phone")
-    q_email = st.text_input("Email", key="quote_email")
-    calendar_type = st.text_input("Type of Calendar", key="quote_calendar")
-    quantity = st.text_input("Quantity", key="quote_quantity")
-    colours = st.text_input("Colours for overprint", key="quote_colours")
-    budget = st.text_input("Budget (optional)", key="quote_budget")
-    submit_quote = st.form_submit_button("Submit Quote")
-    if submit_quote:
-        lead_data = {
-            "name": q_name,
-            "company": q_company,
-            "phone": q_phone,
-            "email": q_email,
-            "calendar_type": calendar_type,
-            "quantity": quantity,
-            "colours": colours,
-            "budget": budget
-        }
-        brain.add_quote(lead_data)
-        st.success("✅ Quote request submitted!")
+if user_message:
+    response = brain.respond(user_message)
+    st.write(f"Ruby: {response}")
