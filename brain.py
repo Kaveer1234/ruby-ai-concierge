@@ -17,7 +17,7 @@ class CompanyBrain:
                 with open(self.library_file, "r", encoding="utf-8") as f:
                     content = f.read()
                     # THE FIX: Uses a raw string (r'') to avoid the SyntaxError
-                    clean_text = re.sub(r'\', '', content)
+                    clean_text = content.replace("\\", "")
                     return clean_text
             except Exception:
                 return "Our 2027 collection is breathtaking!"
@@ -58,3 +58,4 @@ class CompanyBrain:
             return completion.choices[0].message.content
         except Exception:
             return f"Oh {user_name}, I'm just so excited to show you our 2027 range! What specific products can I help you find today?"
+
