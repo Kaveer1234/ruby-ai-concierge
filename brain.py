@@ -2,21 +2,17 @@ import json
 import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from secrets import CREDS_DICT, GROQ_API_KEY  # Load your keys securely
 
 class CompanyBrain:
-    def __init__(self, library_path: str):
+    def __init__(self, library_path: str, creds_dict: dict, sheet_name: str, groq_api_key: str):
         # Load product library
         with open(library_path, "r", encoding="utf-8") as f:
             self.library_lines = [line.strip() for line in f if line.strip()]
-       
+      
         # Store GROQ API key for AI processing
-        self.groq_api_key = GROQ_API_KEY
-
+        self.groq_api_key = groq_api_key
+        
         # Load Google Sheets credentials
-        with open(creds_path, "r") as f:
-            creds_dict = json.load(f)
-
         scope = ["https://spreadsheets.google.com/feeds",
                  "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
@@ -43,9 +39,7 @@ class CompanyBrain:
         """
         user_lower = user_input.lower()
         matches = [line for line in self.library_lines if line.lower() in user_lower]
-
         if matches:
             return f"I found this product info for you: {random.choice(matches)}"
         else:
             return "Sorry, I couldn't find that product. Can you rephrase?"
-
