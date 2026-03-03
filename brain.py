@@ -1,97 +1,45 @@
-import os
 import json
+import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import random
 
 class CompanyBrain:
-    def __init__(self, library_path: str, creds_path: str, sheet_name: str):
+    def __init__(self, library_path, creds_path, sheet_name):
         self.sheet_name = sheet_name
-        self.library_lines = []
-        self.creds_dict = None
-        self.sheet = None
 
-        # -------------------------------
         # Load personality library
-        # -------------------------------
-        if os.path.exists(library_path):
-            with open(library_path, "r", encoding="utf-8") as f:
-                self.library_lines = [line.strip() for line in f if line.strip()]
-        else:
-            print(f"⚠️ Library file not found: {library_path}")
+        with open(library_path, "r", encoding="utf-8") as f:
+            self.library_lines = [line.strip() for line in f if line.strip()]
 
-        # -------------------------------
         # Load Google Sheets credentials
-        # -------------------------------
-        if os.path.exists(creds_path):
-            with open(creds_path, "r", encoding="utf-8") as f:
-                self.creds_dict = json.load(f)
-            self._init_sheet()
-        else:
-            print(f"⚠️ Credentials file not found: {creds_path}")
+        with open(creds_path, "r") as f:
+            creds_dict = json.load(f)
 
-    # -------------------------------
-    # Initialize Google Sheet
-    # -------------------------------
-    def _init_sheet(self):
-        try:
-            scope = [
-                "https://spreadsheets.google.com/feeds",
-                "https://www.googleapis.com/auth/drive"
-            ]
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(
-                self.creds_dict, scopes=scope
-            )
-            client = gspread.authorize(creds)
-            self.sheet = client.open(self.sheet_name).sheet1
-        except Exception as e:
-            print(f"⚠️ Failed to initialize Google Sheet: {e}")
-            self.sheet = None
+        scope = ["https://spreadsheets.google.com/feeds",
+                 "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        self.client = gspread.authorize(creds)
+        self.sheet = self.client.open(sheet_name).sheet1
 
-    # -------------------------------
-    # Add lead to sheet
-    # -------------------------------
-    def add_lead(self, name: str, company: str, phone: str, email: str):
-        if self.sheet:
-            self.sheet.append_row([name, company, phone, email])
-        else:
-            print("⚠️ Sheet not initialized, cannot add lead.")
+    def add_lead(self, name, company, tel, email):
+        """Add a new lead to the Google Sheet"""
+        self.sheet.append_row([name, company, tel, email])
+        print(f"Lead added: {name}, {company}, {tel}, {email}")
 
-    # -------------------------------
-    # Add quote request to sheet
-    # -------------------------------
-    def add_quote(self, lead_data: dict):
-        if self.sheet:
-            row = [
-                lead_data.get("name", ""),
-                lead_data.get("company", ""),
-                lead_data.get("phone", ""),
-                lead_data.get("email", ""),
-                lead_data.get("calendar_type", ""),
-                lead_data.get("quantity", ""),
-                lead_data.get("colours", ""),
-                lead_data.get("budget", "")
-            ]
-            self.sheet.append_row(row)
-        else:
-            print("⚠️ Sheet not initialized, cannot add quote.")
+    def add_quote(self, lead_info, calendar_type, quantity, colours, budget):
+        """Add a quote request to the sheet, appended to lead row"""
+        # lead_info: dict with name, company, tel, email
+        row = [lead_info.get("name"), lead_info.get("company"),
+               lead_info.get("tel"), lead_info.get("email"),
+               calendar_type, quantity, colours, budget]
+        self.sheet.append_row(row)
+        print(f"Quote added for: {lead_info.get('name')}")
 
-    # -------------------------------
-    # Dynamic response from library
-    # -------------------------------
-    def respond(self, prompt: str) -> str:
-        """
-        Returns a line from the personality library that matches the prompt keywords.
-        If no match, returns a random line from the library or a fallback greeting.
-        """
-        if not self.library_lines:
-            return "Hello! How can I help you today?"
-
-        # simple keyword matching
-        matches = [line for line in self.library_lines if any(word.lower() in line.lower() for word in prompt.split())]
-
-        if matches:
-            return random.choice(matches)
-        else:
-            # fallback: random line from library
-            return random.choice(self.library_lines)
+    def respond(self, user_input):
+        """Return a response based on the library (simple keyword/random match)"""
+        # Check for a keyword in the library lines
+        for line in self.library_lines:
+            if line.lower() in user_input.lower():
+                return line
+        # Otherwise, return a random friendly line
+        return random.choice(self.library_lines)
