@@ -5,3 +5,9 @@ gspread
 oauth2client
 PyPDF2
 groq
+pandas==2.3.3
+numpy==2.4.2
+pyyaml==6.0
+
+
+
