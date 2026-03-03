@@ -1,164 +1,137 @@
 import streamlit as st
-import base64
-from datetime import datetime
+from brain import CompanyBrain
 from gtts import gTTS
 import os
 import time
-from brain import CompanyBrain
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import json
 
-# --- 1. INITIALIZATION (Must be at the very top to prevent the AttributeError) ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# -------------------------------
+# Load Google Sheets creds from Streamlit secrets
+# -------------------------------
+creds_dict = st.secrets["gcp_service_account"]
 
-if "step" not in st.session_state:
-    st.session_state.step = "name"
+# -------------------------------
+# Initialize CompanyBrain with personality library
+# -------------------------------
+brain = CompanyBrain(
+    library_path="library.txt",
+    creds_dict=creds_dict,
+    sheet_name="Leads"
+)
 
+# -------------------------------
+# Session state to track conversation
+# -------------------------------
+if "conversation" not in st.session_state:
+    st.session_state.conversation = []
 if "lead_data" not in st.session_state:
-    st.session_state.lead_data = {
-        "Name": "", "Company": "", "Phone": "", "Email": "",
-        "Product": "", "Quantity": "", "Colours": "", "Budget": ""
-    }
+    st.session_state.lead_data = {}
+if "quote_data" not in st.session_state:
+    st.session_state.quote_data = {}
 
-if "avatar" not in st.session_state:
-    st.session_state.avatar = "idle"
+# -------------------------------
+# Helper functions
+# -------------------------------
+def speak(text):
+    """Convert text to speech and play inline"""
+    tts = gTTS(text=text, lang="en")
+    filename = "temp.mp3"
+    tts.save(filename)
+    st.audio(filename, format="audio/mp3")
+    os.remove(filename)
 
-# --- 2. GOOGLE SHEETS FUNCTION ---
-def update_google_sheets(data, lead_type="Initial"):
-    try:
-        # Define the scope for Google Sheets
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        
-        # Pulls the service account info from your Streamlit Secrets vault
-        creds_dict = st.secrets["gcp_service_account"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        
-        # Authorize and open your specific sheet
-        client = gspread.authorize(creds)
-        sheet = client.open("Ruby Leads 2026").sheet1
-        
-        # Prepare the row with the data and the lead_type label
-        row = [
-            data.get("Name", ""), 
-            data.get("Company", ""), 
-            data.get("Phone", ""), 
-            data.get("Email", ""),
-            data.get("Product", ""), 
-            data.get("Quantity", ""), 
-            data.get("Colours", ""), 
-            data.get("Budget", ""),
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            lead_type  # This is the 2nd argument that was causing the crash
-        ]
-        sheet.append_row(row)
-    except Exception as e:
-        # Shows any remaining connection issues in your app logs
-        print(f"Sheet Sync Error: {e}")
+def add_message(role, message):
+    """Add a message to conversation"""
+    st.session_state.conversation.append({"role": role, "message": message})
 
-# --- 3. VIDEO RENDERER (Restoring your perfect layout) ---
-def get_video_base64(file_path):
-    try:
-        with open(file_path, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-    except: return ""
-
-if "idle_hex" not in st.session_state:
-    st.session_state.idle_hex = get_video_base64("kurt_idle.mp4")
-    st.session_state.talk_hex = get_video_base64("kurt_talking.mp4")
-
-idle_css = "display: block;" if st.session_state.avatar == "idle" else "display: none;"
-talk_css = "display: block;" if st.session_state.avatar == "talking" else "display: none;"
-
-st.markdown(f"""
-<style>
-header, [data-testid="stHeader"], footer {{display: none !important;}}
-.main .block-container {{padding: 0 !important; max-width: 100% !important;}}
-.ruby-fixed-header {{
-    position: fixed; top: 0; left: 0; width: 100%; height: 400px;
-    background: white; z-index: 9999; display: flex; flex-direction: column; align-items: center;
-    border-bottom: 3px solid #f0f2f6; padding-top: 10px;
-}}
-.chat-scroll-zone {{
-    margin-top: 408px; height: calc(100vh - 520px); overflow-y: auto;
-    padding: 0 15% 100px 15%; display: flex; flex-direction: column;
-}}
-.vid-stack {{ width: 480px; height: 270px; position: relative; border-radius: 12px; overflow: hidden; background: black; }}
-#vid-idle {{ {idle_css} }}
-#vid-talking {{ {talk_css} }}
-video {{ width: 100%; height: 100%; object-fit: cover; }}
-</style>
-<div class="ruby-fixed-header">
-    <div style="font-weight:700; margin-bottom:10px;">RUBY – Associated Industries 2027</div>
-    <div class="vid-stack">
-        <video id="vid-idle" autoplay loop muted playsinline>
-            <source src="data:video/mp4;base64,{st.session_state.idle_hex}" type="video/mp4">
-        </video>
-        <video id="vid-talking" autoplay loop muted playsinline>
-            <source src="data:video/mp4;base64,{st.session_state.talk_hex}" type="video/mp4">
-        </video>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-# --- 4. CHAT DISPLAY ---
-st.markdown('<div class="chat-scroll-zone">', unsafe_allow_html=True)
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.write(message["content"])
-st.markdown('</div>', unsafe_allow_html=True)
-
-# --- 5. INTERACTION & SYNC ---
-if "brain" not in st.session_state:
-    st.session_state.brain = CompanyBrain()
-
-brain = st.session_state.brain
-if user_input := st.chat_input("Talk to RUBY..."):
-    st.session_state.messages.append({"role": "user", "content": user_input})
-    st.session_state.avatar = "talking"
+# -------------------------------
+# Lead capture form
+# -------------------------------
+def lead_capture():
+    st.subheader("Hi! Let's get started 😊")
     
-    if st.session_state.step == "name":
-        st.session_state.lead_data["Name"] = user_input
-        st.session_state.step = "company"
-        response = f"Nice to meet you {user_input}! Which company are you with?"
-    elif st.session_state.step == "company":
-        st.session_state.lead_data["Company"] = user_input
-        st.session_state.step = "phone"
-        response = "Got it. What is your telephone number?"
-    elif st.session_state.step == "phone":
-        st.session_state.lead_data["Phone"] = user_input
-        st.session_state.step = "email"
-        response = "And your company email address?"
-    elif st.session_state.step == "email":
-        st.session_state.lead_data["Email"] = user_input
-        st.session_state.step = "chat"
-        response = "Perfect! How can I help you today?"
-        # 🚀 SYNC 1: Email captured, push lead
-        update_google_sheets(st.session_state.lead_data, "Initial Contact")
+    if "name" not in st.session_state.lead_data:
+        name = st.text_input("What's your name?", key="name_input")
+        if name:
+            st.session_state.lead_data["name"] = name
+            add_message("customer", name)
+    
+    elif "company" not in st.session_state.lead_data:
+        company = st.text_input(f"Great {st.session_state.lead_data['name']}! Your company?", key="company_input")
+        if company:
+            st.session_state.lead_data["company"] = company
+            add_message("customer", company)
+    
+    elif "phone" not in st.session_state.lead_data:
+        phone = st.text_input("Your phone number?", key="phone_input")
+        if phone:
+            st.session_state.lead_data["phone"] = phone
+            add_message("customer", phone)
+    
+    elif "email" not in st.session_state.lead_data:
+        email = st.text_input("And your email?", key="email_input")
+        if email:
+            st.session_state.lead_data["email"] = email
+            add_message("customer", email)
+            # Update Google Sheet immediately
+            brain.update_leads_sheet(st.session_state.lead_data)
+            add_message("ruby", f"Thanks {st.session_state.lead_data['name']}! I’ve saved your details. 😊")
+
+# -------------------------------
+# Quote capture form
+# -------------------------------
+def quote_capture():
+    st.subheader("Let's get your quote 📄")
+    q = st.session_state.quote_data
+    
+    if "type" not in q:
+        qtype = st.text_input("Type of calendar?", key="q_type")
+        if qtype:
+            q["type"] = qtype
+    
+    elif "quantity" not in q:
+        qty = st.number_input("Quantity?", min_value=1, key="q_qty")
+        if qty:
+            q["quantity"] = qty
+    
+    elif "colors" not in q:
+        colors = st.text_input("Colors for overprint?", key="q_colors")
+        if colors:
+            q["colors"] = colors
+    
+    elif "budget" not in q:
+        budget = st.text_input("If possible, budget?", key="q_budget")
+        if budget:
+            q["budget"] = budget
+            # All quote info filled → update sheet
+            combined_data = {**st.session_state.lead_data, **q}
+            brain.update_leads_sheet(combined_data)
+            add_message("ruby", "Perfect! I’ve saved your quote details. You’ll hear from us soon! 🌟")
+            st.success("Quote submitted successfully!")
+
+# -------------------------------
+# Conversation UI
+# -------------------------------
+st.title("Ruby AI Concierge 💖")
+
+# Display conversation
+for chat in st.session_state.conversation:
+    if chat["role"] == "ruby":
+        st.markdown(f"**Ruby:** {chat['message']}")
     else:
-        ctx = f"User is {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
-        response = brain.get_answer(ctx + user_input, st.session_state.messages)
-        # 🚀 SYNC 2: Quote details (Elephant/Jumbo) captured
-        if any(kw in response.lower() for kw in ["elephant", "jumbo", "quote", "n18"]):
-            st.session_state.lead_data["Product"] = user_input
-            update_google_sheets(st.session_state.lead_data, "Detailed Quote")
+        st.markdown(f"**You:** {chat['message']}")
 
-    st.session_state.messages.append({"role": "assistant", "content": response})
-    st.rerun()
+# Start the flow
+if not st.session_state.lead_data.get("email"):
+    lead_capture()
+else:
+    quote_capture()
 
-# --- 6. VOICE ENGINE ---
-if st.session_state.messages and st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
-    def speak(text):
-        tts = gTTS(text=text, lang='en', tld='co.za')
-        tts.save("response.mp3")
-        with open("response.mp3", "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-            st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
-        os.remove("response.mp3")
-    
-    speak(st.session_state.messages[-1]["content"])
-    st.session_state.avatar = "idle"
-    st.rerun()
-
-
-
+# -------------------------------
+# Personality reply
+# -------------------------------
+# Example: Ruby can give bubbly responses from library
+if st.button("Say something bubbly 💬"):
+    response = brain.get_bubbly_response()
+    add_message("ruby", response)
+    speak(response)
