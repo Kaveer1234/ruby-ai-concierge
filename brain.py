@@ -34,3 +34,4 @@ class CompanyBrain:
             return response.choices[0].message.content
         except Exception as e:
             return f"I encountered an error: {str(e)}"
+
