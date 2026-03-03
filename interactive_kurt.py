@@ -1,24 +1,30 @@
 import streamlit as st
-
+from brain import CompanyBrain
 
 # -------------------------------
 # Paths & Sheet
 # -------------------------------
 LIBRARY_PATH = "library/products.txt"
-CREDS_PATH = "secrets/creds.json"
 SHEET_NAME = "Leads"
+
+# Get secrets (works on Streamlit Cloud; locally use .streamlit/secrets.toml)
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+CREDS_DICT = dict(st.secrets["gcp_service_account"])  # converts TOML section to dict
 
 # -------------------------------
 # Initialize CompanyBrain
 # -------------------------------
-brain = CompanyBrain(library_path=LIBRARY_PATH),
+brain = CompanyBrain(
+    library_path=LIBRARY_PATH,
+    creds_dict=CREDS_DICT,
+    sheet_name=SHEET_NAME,
+    groq_api_key=GROQ_API_KEY
+)
 
 # -------------------------------
 # Streamlit App Layout
 # -------------------------------
-
 st.set_page_config(page_title="Ruby AI Concierge", layout="wide")
-
 st.title("💬 Ruby AI Concierge")
 
 # Embed video avatar (idle/talking/thinking)
@@ -35,7 +41,6 @@ with st.form("lead_form"):
     tel = st.text_input("Telephone")
     email = st.text_input("Email")
     submit_lead = st.form_submit_button("Submit Inquiry")
-
     if submit_lead and name and company and tel and email:
         brain.add_lead(name, company, tel, email)
         st.success(f"Thanks {name}! Your info has been captured.")
@@ -54,7 +59,6 @@ with st.form("quote_form"):
     colours = st.text_input("Colours for Overprint")
     budget = st.text_input("Budget (if known)")
     submit_quote = st.form_submit_button("Submit Quote")
-
     if submit_quote and q_name and q_company and q_tel and q_email:
         lead_info = {
             "name": q_name,
@@ -70,10 +74,6 @@ with st.form("quote_form"):
 # -------------------------------
 st.subheader("Chat with Ruby")
 user_message = st.text_input("Say something to Ruby:")
-
 if user_message:
     response = brain.respond(user_message)
     st.write(f"Ruby: {response}")
-
-
-
