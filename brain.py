@@ -2,11 +2,12 @@ import os
 import json
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import random
 
 class CompanyBrain:
     def __init__(self, library_path: str, creds_path: str, sheet_name: str):
         self.sheet_name = sheet_name
-        self.library = ""
+        self.library_lines = []
         self.creds_dict = None
         self.sheet = None
 
@@ -15,10 +16,9 @@ class CompanyBrain:
         # -------------------------------
         if os.path.exists(library_path):
             with open(library_path, "r", encoding="utf-8") as f:
-                self.library = f.read()
+                self.library_lines = [line.strip() for line in f if line.strip()]
         else:
             print(f"⚠️ Library file not found: {library_path}")
-            self.library = ""  # empty library fallback
 
         # -------------------------------
         # Load Google Sheets credentials
@@ -61,9 +61,6 @@ class CompanyBrain:
     # Add quote request to sheet
     # -------------------------------
     def add_quote(self, lead_data: dict):
-        """
-        lead_data keys: name, company, phone, email, calendar_type, quantity, colours, budget
-        """
         if self.sheet:
             row = [
                 lead_data.get("name", ""),
@@ -80,13 +77,21 @@ class CompanyBrain:
             print("⚠️ Sheet not initialized, cannot add quote.")
 
     # -------------------------------
-    # Optional: fetch response from personality library
+    # Dynamic response from library
     # -------------------------------
     def respond(self, prompt: str) -> str:
-        # basic keyword match example
-        if not self.library:
+        """
+        Returns a line from the personality library that matches the prompt keywords.
+        If no match, returns a random line from the library or a fallback greeting.
+        """
+        if not self.library_lines:
             return "Hello! How can I help you today?"
-        for line in self.library.splitlines():
-            if prompt.lower() in line.lower():
-                return line
-        return "Thanks for reaching out! How can I assist you further?"
+
+        # simple keyword matching
+        matches = [line for line in self.library_lines if any(word.lower() in line.lower() for word in prompt.split())]
+
+        if matches:
+            return random.choice(matches)
+        else:
+            # fallback: random line from library
+            return random.choice(self.library_lines)
