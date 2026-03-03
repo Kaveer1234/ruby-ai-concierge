@@ -1,123 +1,86 @@
-import streamlit as st
-from gtts import gTTS
 import os
-import time
-import threading
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import streamlit as st
+from company_brain import CompanyBrain  # make sure this points to the updated brain file
 
 # -------------------------------
-# CompanyBrain class
+# Paths & Sheet
 # -------------------------------
-class CompanyBrain:
-    def __init__(self, library_path, creds_path, sheet_name="Leads"):
-        self.library_path = library_path
-        self.sheet_name = sheet_name
+LIBRARY_PATH = "library/products.txt"
+CREDS_PATH = "secrets/creds.json"
+SHEET_NAME = "Leads"
 
-        # Load personality library
-        with open(library_path, "r", encoding="utf-8") as f:
-            self.library = f.read()
+# -------------------------------
+# Check required files
+# -------------------------------
+missing_files = []
+if not os.path.exists(LIBRARY_PATH):
+    missing_files.append(f"Library file missing: {LIBRARY_PATH}")
+if not os.path.exists(CREDS_PATH):
+    missing_files.append(f"Credentials file missing: {CREDS_PATH}")
 
-        # Initialize Google Sheets client
-        scope = ["https://www.googleapis.com/auth/spreadsheets"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-        self.client = gspread.authorize(creds)
-        self.sheet = self.client.open_by_key(self._get_sheet_id()).worksheet(sheet_name)
-
-    def _get_sheet_id(self):
-        # Put your Google Sheet ID here or read from secrets
-        return st.secrets["google_sheets"]["sheet_id"]
-
-    def update_lead(self, lead_data):
-        """Append a new lead row"""
-        values = [
-            lead_data.get("name", ""),
-            lead_data.get("company", ""),
-            lead_data.get("tel", ""),
-            lead_data.get("email", ""),
-            lead_data.get("calendar_type", ""),
-            lead_data.get("quantity", ""),
-            lead_data.get("colours", ""),
-            lead_data.get("budget", ""),
-            time.strftime("%Y-%m-%d %H:%M:%S")
-        ]
-        self.sheet.append_row(values)
-
-    def generate_response(self, prompt):
-        """Very simple personality response from library"""
-        # Here, just echo or use simple rules; you can expand
-        response = f"💬 {prompt} (as per library personality)"
-        return response
+if missing_files:
+    st.error("⚠️ Startup Error:\n" + "\n".join(missing_files))
+    st.stop()
 
 # -------------------------------
 # Initialize CompanyBrain
 # -------------------------------
 brain = CompanyBrain(
-    library_path="library.txt",
-    creds_path="secrets/creds.json",
-    sheet_name="Leads"
+    library_path=LIBRARY_PATH,
+    creds_path=CREDS_PATH,
+    sheet_name=SHEET_NAME
 )
 
 # -------------------------------
-# Streamlit Layout
+# Streamlit Layout (unchanged)
 # -------------------------------
 st.set_page_config(page_title="Ruby AI Concierge", layout="wide")
 
-st.title("Ruby AI Concierge 🤖💁‍♀️")
+st.title("💬 Ruby AI Concierge")
 
-# Video display (keep exactly as-is)
-st.video("video.mp4")  # Your AI agent video
+# Video or avatar section (keep as-is)
+st.video("video/ruby_intro.mp4")  # or whatever your video path is
 
-# Chat container
-chat_container = st.container()
-
-# Form for lead capture
+# -------------------------------
+# Lead capture form
+# -------------------------------
 with st.form("lead_form", clear_on_submit=True):
-    st.subheader("Let's get to know you! ✨")
-    name = st.text_input("Your name")
+    st.subheader("👋 Let's get started!")
+    name = st.text_input("Your Name")
     company = st.text_input("Company")
-    tel = st.text_input("Telephone")
+    phone = st.text_input("Phone")
     email = st.text_input("Email")
-    submit_lead = st.form_submit_button("Start Chatting")
+    submit_lead = st.form_submit_button("Submit")
 
     if submit_lead:
-        # Immediately save lead
-        lead = {"name": name, "company": company, "tel": tel, "email": email}
-        brain.update_lead(lead)
-        st.success("Thanks! Lead saved. You can chat now.")
+        brain.add_lead(name, company, phone, email)
+        st.success("✅ Lead submitted!")
 
-# Chat input
-user_input = st.text_input("Ask Ruby anything...")
+# -------------------------------
+# Quote request flow
+# -------------------------------
+with st.form("quote_form", clear_on_submit=True):
+    st.subheader("📅 Request a Quote")
+    q_name = st.text_input("Name")
+    q_company = st.text_input("Company")
+    q_phone = st.text_input("Phone")
+    q_email = st.text_input("Email")
+    calendar_type = st.text_input("Type of Calendar")
+    quantity = st.text_input("Quantity")
+    colours = st.text_input("Colours for overprint")
+    budget = st.text_input("Budget (optional)")
+    submit_quote = st.form_submit_button("Submit Quote")
 
-if user_input:
-    response = brain.generate_response(user_input)
-    st.markdown(f"**Ruby:** {response}")
-
-    # Optional: generate TTS
-    tts = gTTS(response)
-    tts.save("response.mp3")
-    st.audio("response.mp3", format="audio/mp3")
-
-    # Check for quote request
-    if "quote" in user_input.lower():
-        with st.form("quote_form", clear_on_submit=True):
-            st.subheader("Let's get your quote info 📝")
-            calendar_type = st.text_input("Type of Calendar")
-            quantity = st.text_input("Quantity")
-            colours = st.text_input("Colours for overprint")
-            budget = st.text_input("If possible, your budget")
-            submit_quote = st.form_submit_button("Submit Quote")
-
-            if submit_quote:
-                quote_data = {
-                    "name": name,
-                    "company": company,
-                    "tel": tel,
-                    "email": email,
-                    "calendar_type": calendar_type,
-                    "quantity": quantity,
-                    "colours": colours,
-                    "budget": budget
-                }
-                brain.update_lead(quote_data)
-                st.success("Quote info saved! We'll get back to you soon.")
+    if submit_quote:
+        lead_data = {
+            "name": q_name,
+            "company": q_company,
+            "phone": q_phone,
+            "email": q_email,
+            "calendar_type": calendar_type,
+            "quantity": quantity,
+            "colours": colours,
+            "budget": budget
+        }
+        brain.add_quote(lead_data)
+        st.success("✅ Quote request submitted!")
