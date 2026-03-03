@@ -2,14 +2,16 @@ import json
 import random
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from secrets import CREDS_DICT, GROQ_API_KEY  # Load your keys securely
 
 class CompanyBrain:
-    def __init__(self, library_path, creds_path, sheet_name):
-        self.sheet_name = sheet_name
-
-        # Load personality library
+    def __init__(self, library_path: str):
+        # Load product library
         with open(library_path, "r", encoding="utf-8") as f:
             self.library_lines = [line.strip() for line in f if line.strip()]
+       
+        # Store GROQ API key for AI processing
+        self.groq_api_key = GROQ_API_KEY
 
         # Load Google Sheets credentials
         with open(creds_path, "r") as f:
@@ -35,11 +37,15 @@ class CompanyBrain:
         self.sheet.append_row(row)
         print(f"Quote added for: {lead_info.get('name')}")
 
-    def respond(self, user_input):
-        """Return a response based on the library (simple keyword/random match)"""
-        # Check for a keyword in the library lines
-        for line in self.library_lines:
-            if line.lower() in user_input.lower():
-                return line
-        # Otherwise, return a random friendly line
-        return random.choice(self.library_lines)
+    def respond(self, user_input: str) -> str:
+        """
+        Basic product matching: returns a product line if found in input.
+        """
+        user_lower = user_input.lower()
+        matches = [line for line in self.library_lines if line.lower() in user_lower]
+
+        if matches:
+            return f"I found this product info for you: {random.choice(matches)}"
+        else:
+            return "Sorry, I couldn't find that product. Can you rephrase?"
+
