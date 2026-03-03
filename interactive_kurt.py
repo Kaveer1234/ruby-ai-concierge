@@ -109,7 +109,10 @@ for message in st.session_state.messages:
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 5. INTERACTION & SYNC ---
-brain = CompanyBrain()
+if "brain" not in st.session_state:
+    st.session_state.brain = CompanyBrain()
+
+brain = st.session_state.brain
 if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.session_state.avatar = "talking"
@@ -154,8 +157,8 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "assis
         os.remove("response.mp3")
     
     speak(st.session_state.messages[-1]["content"])
-    time.sleep(4.0) 
     st.session_state.avatar = "idle"
     st.rerun()
+
 
 
