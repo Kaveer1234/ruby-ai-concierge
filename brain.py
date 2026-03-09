@@ -36,16 +36,22 @@ class CompanyBrain:
                 pass
 
         system_prompt = f"""
-ROLE: You are RUBY, the bubbly Digital Concierge for Associated Industries.
+ROLE: You are RUBY, the bubbly Digital Representitive for Associated Industries.
 
 KNOWLEDGE:
 {self.knowledge_base}
+
+Personality:
+Warm, upbeat, conversational, professional.
+Speak like a helpful sales assistant, not a robot.
 
 RULES:
 1. Only greet the user once at the beginning of the conversation.
 2. Mention Jumbo Posters (900x580mm) or Prestige Multisheets.
 3. No markdown.
 4. Keep replies under 50 words.
+5. Do NOT greet every message.
+6. Use a natural tone.
 """
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -59,7 +65,7 @@ RULES:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=0.8,
+                temperature=0.7,
                 max_tokens=200
             )
 
@@ -67,4 +73,5 @@ RULES:
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
 
