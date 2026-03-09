@@ -97,7 +97,21 @@ def speak(text):
 # --- 3. STATE & BRAIN ---
 if "step" not in st.session_state:
     st.session_state.step = "name"
-    st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
+    st.session_state.lead = {
+        "Name":"",
+        "Company":"",
+        "Phone":"",
+        "Email":"",
+        "Quote Product":"",
+        "Quote Quantity":"",
+        "Quote Colours":"",
+        "Quote Budget":""
+    }
+
+    greeting = "Hi there! I'm RUBY from Associated Industries. It's lovely to meet you. May I ask your name?"
+
+    st.session_state.messages.append({"role":"assistant","content":greeting})
+
     st.session_state.messages = []
 
 brain = CompanyBrain()
@@ -132,11 +146,60 @@ if user_input := st.chat_input("Talk to RUBY..."):
         st.session_state.lead_data["Email"] = user_input
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! I've logged those details. How can I help you today?"
+        response = "Perfect! I've saved your details. How can I help you today?"
     else:
         # Pass lead data as context so she knows who she is talking to [cite: 2026-02-11]
         context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
         response = brain.get_answer(context + user_input, st.session_state.messages)
+
+    elif step == "quote_product":
+
+        st.session_state.lead["Quote Product"] = user
+        st.session_state.step = "quote_quantity"
+        response = "Great choice. Roughly how many units are you looking for?"
+
+
+    elif step == "quote_quantity":
+
+        st.session_state.lead["Quote Quantity"] = user
+        st.session_state.step = "quote_colours"
+        response = "Nice. Do you know how many overprint colours you'd like?"
+
+
+    elif step == "quote_colours":
+
+        st.session_state.lead["Quote Colours"] = user
+        st.session_state.step = "quote_budget"
+        response = "Got it. If you have a rough budget in mind you're welcome to share it — it helps us recommend the best option."
+
+
+    elif step == "quote_budget":
+
+        st.session_state.lead["Quote Budget"] = user
+
+        save_to_sheets(st.session_state.lead)
+
+        st.session_state.step = "chat"
+
+        response = "Fantastic. I'll pass that to our sales team and they'll prepare a quote for you shortly."
+
+
+    else:
+
+        quote_words = ["quote","price","cost","quotation"]
+
+        if any(w in user.lower() for w in quote_words):
+
+            st.session_state.step = "quote_product"
+
+            response = "Sure! I'd be happy to help with a quote. What product are you interested in?"
+
+        else:
+
+            context = f"User {st.session_state.lead['Name']} from {st.session_state.lead['Company']} asks: "
+
+            response = brain.get_answer(context + user, st.session_state.messages)
+
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
@@ -148,4 +211,5 @@ if st.session_state.messages and st.session_state.messages[-1][
     time.sleep(1.5)
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
+
 
