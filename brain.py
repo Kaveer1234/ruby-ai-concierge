@@ -42,7 +42,7 @@ KNOWLEDGE:
 {self.knowledge_base}
 
 RULES:
-1. Greet {user_name} warmly.
+1. Only greet the user once at the beginning of the conversation.
 2. Mention Jumbo Posters (900x580mm) or Prestige Multisheets.
 3. No markdown.
 4. Keep replies under 50 words.
@@ -67,3 +67,4 @@ RULES:
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
