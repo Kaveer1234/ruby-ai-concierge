@@ -129,77 +129,101 @@ if user_input := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
     st.session_state.avatar = "kurt_talking.mp4"
 
-    # Lead Gen Flow [cite: 2026-02-12]
-    if st.session_state.step == "name":
-        st.session_state.lead_data["Name"] = user_input
-        st.session_state.step = "company"
-        response = f"Nice to meet you {user_input}! Which company are you with?"
-    elif st.session_state.step == "company":
-        st.session_state.lead_data["Company"] = user_input
-        st.session_state.step = "phone"
-        response = "Got it. What is your telephone number?"
-    elif st.session_state.step == "phone":
-        st.session_state.lead_data["Phone"] = user_input
-        st.session_state.step = "email"
-        response = "And your company email address?"
-    elif st.session_state.step == "email":
-        st.session_state.lead_data["Email"] = user_input
-        st.session_state.step = "chat"
-        save_to_sheets(st.session_state.lead_data)
-        response = "Perfect! I've saved your details. How can I help you today?"
-    else:
-        # Pass lead data as context so she knows who she is talking to [cite: 2026-02-11]
-        context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
-        response = brain.get_answer(context + user_input, st.session_state.messages)
+    # Lead Gen Flow (first-time only)
+    if st.session_state.step in ["name", "company", "phone", "email"]:
+        if st.session_state.step == "name":
+            st.session_state.lead_data["Name"] = user_input.strip()
+            st.session_state.step = "company"
+            response = f"Nice to meet you {user_input}! Which company are you with?"
 
-    elif step == "quote_product":
+        elif st.session_state.step == "company":
+            st.session_state.lead_data["Company"] = user_input.strip()
+            st.session_state.step = "phone"
+            response = "Got it. What is your telephone number?"
 
-        st.session_state.lead["Quote Product"] = user
-        st.session_state.step = "quote_quantity"
-        response = "Great choice. Roughly how many units are you looking for?"
+        elif st.session_state.step == "phone":
+            st.session_state.lead_data["Phone"] = user_input.strip()
+            st.session_state.step = "email"
+            response = "And your company email address?"
 
-
-    elif step == "quote_quantity":
-
-        st.session_state.lead["Quote Quantity"] = user
-        st.session_state.step = "quote_colours"
-        response = "Nice. Do you know how many overprint colours you'd like?"
-
-
-    elif step == "quote_colours":
-
-        st.session_state.lead["Quote Colours"] = user
-        st.session_state.step = "quote_budget"
-        response = "Got it. If you have a rough budget in mind you're welcome to share it — it helps us recommend the best option."
-
-
-    elif step == "quote_budget":
-
-        st.session_state.lead["Quote Budget"] = user
-
-        save_to_sheets(st.session_state.lead)
-
-        st.session_state.step = "chat"
-
-        response = "Fantastic. I'll pass that to our sales team and they'll prepare a quote for you shortly."
-
+        elif st.session_state.step == "email":
+            st.session_state.lead_data["Email"] = user_input.strip()
+            st.session_state.step = "chat"
+            save_to_sheets(st.session_state.lead_data)
+            response = "Perfect! I've logged those details. How can I help you today?"
 
     else:
+        # Normal chat + quote handling after lead is captured
+        # Check for quote intent first
+        user_lower = user_input.lower()
+        if "quote" in user_lower or "price" in user_lower or "cost" in user_lower or st.session_state.get("quote_in_progress", False):
+            
+            if "quote_in_progress" not in st.session_state:
+                st.session_state.quote_in_progress = True
+                st.session_state.quote_step = "product"
+                st.session_state.quote_data = {}
+                response = (
+                    f"Sure thing! I'd love to get you a quote. "
+                    f"Which product are you interested in? "
+                    f"(Like Jumbo Posters, Desk Triangles, Prestige Multisheets...?)"
+                )
 
-        quote_words = ["quote","price","cost","quotation"]
+            elif st.session_state.quote_step == "product":
+                st.session_state.quote_data["product"] = user_input.strip()
+                st.session_state.quote_step = "quantity"
+                response = f"Great choice – {user_input}! How many pieces are you looking for?"
 
-        if any(w in user.lower() for w in quote_words):
+            elif st.session_state.quote_step == "quantity":
+                try:
+                    qty = int(user_input.strip())
+                    st.session_state.quote_data["quantity"] = qty
+                    st.session_state.quote_step = "colours"
+                    response = f"{qty} units – awesome! What overprint colours did you have in mind? (full colour, black, specific PMS codes… or none?)"
+                except ValueError:
+                    response = "Sorry, could you give me a number for the quantity? 😊"
 
-            st.session_state.step = "quote_product"
+            elif st.session_state.quote_step == "colours":
+                st.session_state.quote_data["colours"] = user_input.strip()
+                st.session_state.quote_step = "budget"
+                response = "Colours noted! And what's your rough budget range? (no worries at all if you're still deciding)"
 
-            response = "Sure! I'd be happy to help with a quote. What product are you interested in?"
+            elif st.session_state.quote_step == "budget":
+                st.session_state.quote_data["budget"] = user_input.strip()
+
+                # Save quote
+                lead_info = {
+                    "name": st.session_state.lead_data.get("Name", "Unknown"),
+                    "company": st.session_state.lead_data.get("Company", "Unknown"),
+                    "tel": st.session_state.lead_data.get("Phone", ""),
+                    "email": st.session_state.lead_data.get("Email", "")
+                }
+                brain.add_quote(
+                    lead_info,
+                    st.session_state.quote_data.get("product", ""),
+                    st.session_state.quote_data.get("quantity", 0),
+                    st.session_state.quote_data.get("colours", ""),
+                    st.session_state.quote_data.get("budget", "")
+                )
+
+                response = (
+                    "All set! I've logged your quote request – we'll get back to you "
+                    "with pricing very soon. Anything else I can help with today?"
+                )
+
+                # Clean up
+                del st.session_state.quote_in_progress
+                del st.session_state.quote_step
+                del st.session_state.quote_data
+
+            else:
+                # Fallback to brain
+                context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
+                response = brain.get_answer(context + user_input, st.session_state.messages)
 
         else:
-
-            context = f"User {st.session_state.lead['Name']} from {st.session_state.lead['Company']} asks: "
-
-            response = brain.get_answer(context + user, st.session_state.messages)
-
+            # Normal non-quote chat
+            context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}. "
+            response = brain.get_answer(context + user_input, st.session_state.messages)
 
     st.session_state.messages.append({"role": "assistant", "content": response})
     st.rerun()
@@ -211,5 +235,6 @@ if st.session_state.messages and st.session_state.messages[-1][
     time.sleep(1.5)
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
+
 
 
