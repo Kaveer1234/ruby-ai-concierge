@@ -7,6 +7,9 @@ import os
 import time
 from brain import CompanyBrain
 
+# Load Groq API key from Streamlit secrets
+os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
+
 # --- 1. UI SETUP: THE PHYSICAL BARRIER ---
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
@@ -145,3 +148,4 @@ if st.session_state.messages and st.session_state.messages[-1][
     time.sleep(1.5)
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
+
