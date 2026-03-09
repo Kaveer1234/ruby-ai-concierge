@@ -95,6 +95,20 @@ def speak(text):
 
 
 # --- 3. STATE & BRAIN ---
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    st.session_state.avatar = "kurt_talking.mp4" # Set to talking for the greeting
+    
+    # 1. Define the Greeting
+    greeting = "Hi there! I'm RUBY from Associated Industries. It's lovely to meet you. May I ask your name?"
+    
+    # 2. Add to history
+    st.session_state.messages.append({"role": "assistant", "content": greeting})
+    
+    # 3. FORCE VOICE IMMEDIATELY ON LOAD
+    # This ensures she speaks the moment the browser opens
+    speak(greeting)
+    st.session_state.avatar = "kurt_idle.mp4"
 if "step" not in st.session_state:
     st.session_state.step = "name"
     st.session_state.lead_data = {"Name": "", "Company": "", "Phone": "", "Email": ""}
@@ -148,3 +162,4 @@ if st.session_state.messages and st.session_state.messages[-1][
     time.sleep(1.5)
     st.session_state.avatar = "kurt_idle.mp4"
     st.rerun()
+
