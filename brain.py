@@ -36,7 +36,7 @@ class CompanyBrain:
             user_name = match.group(1).strip()
 
         system_prompt = f"""
-You are RUBY, the friendly digital representative for Associated Industries.
+You are RUBY, the friendly digital representative for Associated Industries.Do not repeat the customer's name in every single sentence. Only use their name if you are greeting them for the first time.
 
 PERSONALITY
 Warm, upbeat, conversational and professional.
@@ -87,3 +87,4 @@ COMPANY KNOWLEDGE
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
