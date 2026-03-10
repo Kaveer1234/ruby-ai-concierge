@@ -56,6 +56,9 @@ CONVERSATION RULES
 • Do not repeat the user's name in every reply.
 • Use their name occasionally.
 • Keep replies natural and conversational.
+• Do not repeatedly introduce yourself.
+• Speak naturally like a helpful sales consultant.
+• Avoid repeating the customer's name unless necessary.
 
 PRODUCT RULES
 • When asked for themes or codes, list them clearly.
@@ -99,4 +102,5 @@ COMPANY KNOWLEDGE
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
 
