@@ -11,19 +11,26 @@ os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
 
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
-
+# 1. Add caching to the encoding function
+@st.cache_data
 def get_video_base64(file_path):
     try:
         with open(file_path, "rb") as f:
             return base64.b64encode(f.read()).decode()
     except:
         return ""
-
+# 2. Pre-encode BOTH videos at the start
+if "video_idle" not in st.session_state:
+    st.session_state.video_idle = get_video_base64("kurt_idle.mp4")
+    st.session_state.video_talking = get_video_base64("kurt_talking.mp4")
 
 if "avatar" not in st.session_state:
     st.session_state.avatar = "kurt_idle.mp4"
 
 current_video_hex = get_video_base64(st.session_state.avatar)
+
+# Pick the right pre-encoded hex based on the current state
+current_video_hex = st.session_state.video_talking if st.session_state.avatar == "talking" else st.session_state.video_idle
 
 st.markdown(f"""
 <style>
@@ -283,6 +290,7 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
 
 
 
