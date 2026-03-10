@@ -116,7 +116,7 @@ if st.session_state.messages[-1]["role"] == "user":
 
     # Lead capture & Quote flow logic
     if step == "name":
-        clean_name = user_text.lower().replace("my name is","").replace("i am","").replace("i'm","").strip().title()
+        clean_name = user_text.lower().replace("hi","").replace("hello","").replace("my name is","").replace("i am","").replace("i'm","").strip().title()
         st.session_state.lead_data["Name"] = clean_name
         st.session_state.step = "company"
         response = f"Nice to meet you {clean_name}! Which company are you with?"
@@ -168,3 +168,4 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
     time.sleep(1.0)
     st.session_state.avatar = "idle"
     st.rerun()
+
