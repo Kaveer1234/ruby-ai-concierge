@@ -62,6 +62,11 @@ PRODUCT RULES
 • Never invent products, themes, or codes.
 • Only use information from the company knowledge base.
 
+PRICING RULES
+• Never generate prices.
+• Never guess pricing.
+• If a user asks for pricing, tell them a formal quote will be prepared by sales.
+
 STYLE
 • No markdown.
 • Maximum 50 words per reply.
@@ -94,3 +99,4 @@ COMPANY KNOWLEDGE
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
