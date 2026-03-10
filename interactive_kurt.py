@@ -166,23 +166,25 @@ if st.session_state.messages[-1]["role"] == "user":
     # 3. RERUN TO SHOW THE VIDEO CHANGE IMMEDIATELY
     st.rerun()
 
-# --- 7. VOICE EXECUTION & STATE RESET ---
-# This block only runs when the last message is from the Assistant AND the avatar is "talking"
-if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
-    full_text = st.session_state.messages[-1]["content"]
-    
-    # Trigger the voice
-    speak(full_text)
-    
-    # CALCULATE WAIT TIME
-    # Humans speak at ~150 words per minute. 
-    # This formula ensures the "Talking" video stays active for the duration of the audio.
-    words = len(full_text.split())
-    wait_time = (words / 2.5) + 1.2  # Dynamic wait based on word count
-    
-    time.sleep(wait_time)
-    
-    # After speaking is done, reset to idle
-    st.session_state.avatar = "idle"
-    st.rerun()
+# --- 7. VOICE & RESET ---
+# This checks if the LAST message is from the assistant and hasn't been "spoken" yet
+if "last_spoken" not in st.session_state:
+    st.session_state.last_spoken = None
 
+if st.session_state.messages[-1]["role"] == "assistant":
+    current_content = st.session_state.messages[-1]["content"]
+    
+    # Only speak if this is a new message we haven't processed yet
+    if current_content != st.session_state.last_spoken:
+        st.session_state.avatar = "talking"
+        st.session_state.last_spoken = current_content
+        
+        # Trigger audio
+        speak(current_content)
+        
+        # Calculate dynamic wait based on content length
+        wait_time = max(2.0, (len(current_content) / 10.0) + 1.0)
+        time.sleep(wait_time)
+        
+        st.session_state.avatar = "idle"
+        st.rerun()
