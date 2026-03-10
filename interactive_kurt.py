@@ -108,12 +108,13 @@ if user := st.chat_input("Talk to RUBY..."):
     st.session_state.avatar = "thinking"
     st.rerun()
 
+# Processing Loop
 if st.session_state.messages[-1]["role"] == "user":
     user_text = st.session_state.messages[-1]["content"]
     step = st.session_state.step
     response = ""
 
-    # Lead capture with improved name cleaning (No more "Hi Chris" as a name)
+    # (Logic for Name, Company, Email, and Quotes)
     if step == "name":
         clean_name = user_text.lower().replace("hi","").replace("hello","").replace("my name is","").replace("i am","").replace("i'm","").strip().title()
         st.session_state.lead_data["Name"] = clean_name
@@ -151,23 +152,37 @@ if st.session_state.messages[-1]["role"] == "user":
         st.session_state.lead_data["Quote_Budget"] = user_text
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = f"Perfect {st.session_state.lead_data['Name']}. I've captured those specs for you."
+        response = f"Perfect {st.session_state.lead_data['Name']}. I've captured those specs. Sales will be in touch!"
     else:
         context = f"Customer: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}."
         response = brain.get_answer(context + user_text, st.session_state.messages)
 
+    # 1. ADD THE RESPONSE
     st.session_state.messages.append({"role":"assistant","content":response})
+    
+    # 2. SET AVATAR TO TALKING
     st.session_state.avatar = "talking"
+    
+    # 3. RERUN TO SHOW THE VIDEO CHANGE IMMEDIATELY
     st.rerun()
 
-# --- 7. VOICE & RESET ---
+# --- 7. VOICE EXECUTION & STATE RESET ---
+# This block only runs when the last message is from the Assistant AND the avatar is "talking"
 if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
     full_text = st.session_state.messages[-1]["content"]
+    
+    # Trigger the voice
     speak(full_text)
-    # Dynamic wait time based on text length to prevent cut-off
-    wait_time = (len(full_text) * 0.08) + 1.5
+    
+    # CALCULATE WAIT TIME
+    # Humans speak at ~150 words per minute. 
+    # This formula ensures the "Talking" video stays active for the duration of the audio.
+    words = len(full_text.split())
+    wait_time = (words / 2.5) + 1.2  # Dynamic wait based on word count
+    
     time.sleep(wait_time)
+    
+    # After speaking is done, reset to idle
     st.session_state.avatar = "idle"
     st.rerun()
-
 
