@@ -11,7 +11,7 @@ os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"]
 
 st.set_page_config(page_title="RUBY - Associated Industries", layout="wide")
 
-# 1. Add caching to the encoding function
+# --- 1. THE VIDEO ENCODER (Cashed for speed) ---
 @st.cache_data
 def get_video_base64(file_path):
     try:
@@ -19,71 +19,62 @@ def get_video_base64(file_path):
             return base64.b64encode(f.read()).decode()
     except:
         return ""
-# 2. Pre-encode BOTH videos at the start
+
+# --- 2. THE INITIALIZATION (Runs once) ---
 if "video_idle" not in st.session_state:
     st.session_state.video_idle = get_video_base64("kurt_idle.mp4")
     st.session_state.video_talking = get_video_base64("kurt_talking.mp4")
 
 if "avatar" not in st.session_state:
-    st.session_state.avatar = "kurt_idle.mp4"
+    st.session_state.avatar = "idle" # Start as idle
 
-current_video_hex = get_video_base64(st.session_state.avatar)
-
-# Pick the right pre-encoded hex based on the current state
+# --- 3. THE PICKER (Decides which video to show) ---
 current_video_hex = st.session_state.video_talking if st.session_state.avatar == "talking" else st.session_state.video_idle
 
+# --- 4. THE UI LAYOUT (The Fixed Header) ---
 st.markdown(f"""
 <style>
 header, [data-testid="stHeader"], footer {{display:none}}
 .main .block-container {{padding:0; max-width:100%}}
 
 .ruby-fixed-header {{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:400px;
-background:white;
-z-index:9999;
-display:flex;
-flex-direction:column;
-align-items:center;
-border-bottom:3px solid #f0f2f6;
-padding-top:10px;
+    position:fixed;
+    top:0; left:0; width:100%;
+    height:400px;
+    background:white;
+    z-index:9999;
+    display:flex; flex-direction:column; align-items:center;
+    border-bottom:3px solid #f0f2f6;
+    padding-top:10px;
 }}
 
 .chat-scroll-zone {{
-margin-top:408px;
-height:calc(100vh - 520px);
-overflow-y:auto;
-padding:0 15% 100px 15%;
-display:flex;
-flex-direction:column;
+    margin-top:408px;
+    height:calc(100vh - 520px);
+    overflow-y:auto;
+    padding:0 15% 100px 15%;
+    display:flex; flex-direction:column;
 }}
 
 div[data-testid="stChatInput"] {{
-position:fixed;
-bottom:20px;
-z-index:10000;
+    position:fixed;
+    bottom:20px;
+    z-index:10000;
 }}
 
-video {{
-border-radius:12px;
-box-shadow:0 4px 20px rgba(0,0,0,0.15);
-}}
+video {{ border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); }}
 </style>
 
 <div class="ruby-fixed-header">
-<div style="font-weight:700;font-size:1.1rem;margin-bottom:10px;">
-RUBY – Associated Industries 2027
-</div>
+    <div style="font-weight:700;font-size:1.1rem;margin-bottom:10px;">
+    RUBY – Associated Industries 2027
+    </div>
 
-<video width="480" autoplay loop muted playsinline="{st.session_state.avatar}">
-<source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
-</video>
+    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
+        <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
+    </video>
 </div>
 """, unsafe_allow_html=True)
-
 
 # -----------------------------
 # Google Sheets
@@ -169,12 +160,11 @@ st.markdown('</div>', unsafe_allow_html=True)
 # User Input
 # -----------------------------
 if user := st.chat_input("Talk to RUBY..."):
-
     st.session_state.messages.append({"role":"user","content":user})
-    st.session_state.avatar="kurt_talking.mp4"
-
-    step = st.session_state.step
-
+    
+    # --- TRIGGER THE TALKING VIDEO ---
+    st.session_state.avatar = "talking" 
+    st.rerun() # This reloads the page so the video starts talking while the AI thinks
     # -------------------
     # Lead capture
     # -------------------
@@ -290,6 +280,7 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
 
 
 
