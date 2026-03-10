@@ -174,7 +174,15 @@ if user := st.chat_input("Talk to RUBY..."):
 
     if step == "name":
 
-        st.session_state.lead_data["Name"] = user
+        name = user.lower()
+
+        name = name.replace("my name is","")
+        name = name.replace("i am","")
+        name = name.replace("i'm","")
+
+        name = name.strip().title()
+
+        st.session_state.lead_data["Name"] = name
         st.session_state.step = "company"
 
         response = f"Nice to meet you {user}! Which company are you with?"
@@ -269,4 +277,5 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
 
