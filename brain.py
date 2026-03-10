@@ -4,45 +4,36 @@ import os
 import re
 
 class CompanyBrain:
-
     def __init__(self, library_path=None):
-
-        # Load API key from Streamlit
+        # Load API key from Streamlit secrets
         self.api_key = st.secrets["GROQ_API_KEY"]
 
         # Initialize Groq client
         self.client = Groq(api_key=self.api_key)
 
-        # Fast chat model
+        # Model choice (fast version)
         self.model = "llama-3.1-8b-instant"
 
         self.library_file = library_path if library_path else "library/products.txt"
         self.knowledge_base = self._load_library()
 
-
     def _load_library(self):
-
         if os.path.exists(self.library_file):
             try:
                 with open(self.library_file, "r", encoding="utf-8") as f:
                     content = f.read()
                     return re.sub(r'\[(?:source|cite): [\d, ]+\]', '', content)
-            except:
+            except Exception:
                 return "Our 2027 collection is breathtaking!"
-
         return "Associated Industries 2027 range."
 
-
     def get_answer(self, user_query, history):
-
+        # 1️⃣ Safe user name parsing
+        import re
         user_name = "there"
-
-        if "User:" in user_query:
-            try:
-                user_name = user_query.split("User: ")[1].split(" from")[0]
-            except:
-                pass
-
+        match = re.search(r"User:\s*([A-Za-z ]+?)(?:\sfrom|$)", user_query)
+        if match:
+            user_name = match.group(1).strip()
 
         system_prompt = f"""
 You are RUBY, the friendly digital representative for Associated Industries.
@@ -56,8 +47,6 @@ CONVERSATION RULES
 • Do not repeat the user's name in every reply.
 • Use their name occasionally.
 • Keep replies natural and conversational.
-• Do not repeatedly introduce yourself.
-• Speak naturally like a helpful sales consultant.
 • Avoid repeating the customer's name unless necessary.
 
 PRODUCT RULES
@@ -79,17 +68,12 @@ COMPANY KNOWLEDGE
 {self.knowledge_base}
 """
 
-
         messages = [{"role": "system", "content": system_prompt}]
-
         for msg in history[-6:]:
             messages.append(msg)
-
         messages.append({"role": "user", "content": user_query})
 
-
         try:
-
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -97,13 +81,9 @@ COMPANY KNOWLEDGE
                 max_tokens=450
             )
 
-            return completion.choices[0].message.content
+            response_text = completion.choices[0].message.content
 
-            # Pass the full text to your TTS generator
-            generate_tts(response_text)  # Make sure this consumes the entire string
+            return response_text
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
-
-
-
