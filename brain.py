@@ -94,13 +94,16 @@ COMPANY KNOWLEDGE
                 model=self.model,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=200
+                max_tokens=450
             )
 
             return completion.choices[0].message.content
 
+            # Pass the full text to your TTS generator
+            generate_tts(response_text)  # Make sure this consumes the entire string
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
 
 
