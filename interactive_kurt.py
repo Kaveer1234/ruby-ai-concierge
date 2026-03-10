@@ -170,3 +170,4 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
     st.session_state.avatar = "idle"
     st.rerun()
 
+
