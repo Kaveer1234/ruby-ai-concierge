@@ -159,8 +159,9 @@ if st.session_state.messages[-1]["role"] == "user":
         st.session_state.lead_data["Quote_Budget"] = user_text
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = f"Perfect {st.session_state.lead_data['Name']}. I've captured those specs. Sales will be in touch! Is there anything else you would like me to assist you with?
-        "
+        response = f"""Perfect {st.session_state.lead_data['Name']}. 
+        I've captured those specs. Sales will be in touch! 
+        Is there anything else you would like me to assist you with?"""
     else:
         context = f"Customer: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}."
         response = brain.get_answer(context + user_text, st.session_state.messages)
@@ -192,4 +193,5 @@ if st.session_state.messages[-1]["role"] == "assistant":
         time.sleep(duration)
         st.session_state.avatar = "idle"
         st.rerun()
+
 
