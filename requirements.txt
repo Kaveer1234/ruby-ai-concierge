@@ -8,7 +8,7 @@ groq
 pandas
 numpy
 pyyaml
-pyttsx3 
+
 
 
 
