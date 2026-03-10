@@ -71,7 +71,7 @@ box-shadow:0 4px 20px rgba(0,0,0,0.15);
 RUBY – Associated Industries 2027
 </div>
 
-<video width="480" autoplay loop muted playsinline>
+<video width="480" autoplay loop muted playsinline="{st.session_state.avatar}">
 <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
 </video>
 </div>
@@ -283,5 +283,6 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
 
 
