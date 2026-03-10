@@ -12,7 +12,7 @@ class CompanyBrain:
         # Initialize Groq client
         self.client = Groq(api_key=self.api_key)
 
-        self.model = "llama-3.3-70b-versatile"
+        self.model = "llama-3.1-8b-instant"
         self.library_file = library_path if library_path else "library/products.txt"
         self.knowledge_base = self._load_library()
 
@@ -45,6 +45,21 @@ Personality:
 Warm, upbeat, conversational, professional.
 Speak like a helpful sales assistant, not a robot.
 
+Conversation behaviour:
+• Greet the user only once at the beginning.
+• Do NOT repeat the user's name in every response.
+• Use their name occasionally, not constantly.
+• Speak naturally like a human sales assistant.
+
+Product behaviour:
+• When asked for themes or codes, list them clearly.
+• Do not invent products or codes.
+• Only use information provided in the company knowledge ba
+
+Company knowledge:
+{self.knowledge_base}
+"""
+
 RULES:
 1. Only greet the user once at the beginning of the conversation.
 2. Mention Jumbo Posters (900x580mm) or Prestige Multisheets.
@@ -73,6 +88,7 @@ RULES:
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
 
 
 
