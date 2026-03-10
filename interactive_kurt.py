@@ -77,7 +77,7 @@ video {{ border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); }}
 
 # --- 4. FUNCTIONS ---
 def save_to_sheets(data):
-    webhook_url = "https://script.google.com/macros/s/AKfycbyItMfaLdTh1AomZBj6ZfLK-fDHOZC4o7jm7CFhJibg3AMxB61uXtOxVr7axV2Qn-CmPA/exec"
+    webhook_url = "https://script.google.com/macros/s/AKfycbypG7reGokzaruO1aJyRrxzvz7xPBNWRt3ImFmDmefFU2XaCXilWtXQEq3_47eBU-3gtg/exec"
     try:
         data["Timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
         requests.post(webhook_url, json=data, timeout=5)
@@ -169,3 +169,4 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
     time.sleep(wait_time)
     st.session_state.avatar = "idle"
     st.rerun()
+
