@@ -1,5 +1,3 @@
-import streamlit as st
-import requests
 import base64
 from datetime import datetime
 from gtts import gTTS
@@ -27,26 +25,28 @@ if "messages" not in st.session_state:
 
 if "step" not in st.session_state:
     st.session_state.step = "name"
-    st.session_state.avatar = "idle"  # Current state: idle, thinking, or talking
+    st.session_state.avatar = "idle" 
     st.session_state.lead_data = {
         "Name":"", "Company":"", "Phone":"", "Email":"",
         "Quote Product":"", "Quote Quantity":"", "Quote Colours":"", "Quote Budget":""
     }
 
-# Pre-load all videos into memory once for instant swapping
+# Ensure videos are pre-loaded
 if "video_idle" not in st.session_state:
     st.session_state.video_idle = get_video_base64("kurt_idle.mp4")
     st.session_state.video_talking = get_video_base64("kurt_talking.mp4")
     st.session_state.video_thinking = get_video_base64("kurt_thinking.mp4")
 
 # --- 3. UI LAYOUT & FIXED HEADER ---
-# Pick the right video hex based on the current state
 if st.session_state.avatar == "talking":
     current_video_hex = st.session_state.video_talking
 elif st.session_state.avatar == "thinking":
     current_video_hex = st.session_state.video_thinking
 else:
     current_video_hex = st.session_state.video_idle
+
+# We add a timestamp to the key to FORCE the browser to refresh the video element
+video_key = f"{st.session_state.avatar}_{int(time.time())}"
 
 st.markdown(f"""
 <style>
@@ -67,7 +67,7 @@ video {{ border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); }}
 
 <div class="ruby-fixed-header">
     <div style="font-weight:700;font-size:1.1rem;margin-bottom:10px;">RUBY – Associated Industries 2027</div>
-    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
+    <video width="480" autoplay loop muted playsinline key="{video_key}">
         <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
     </video>
 </div>
@@ -103,20 +103,18 @@ st.markdown('</div>', unsafe_allow_html=True)
 # --- 6. INTERACTION LOGIC ---
 if user := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role":"user","content":user})
-    
-    # Switch to thinking video while the computer works
     st.session_state.avatar = "thinking"
     st.rerun()
 
-# This part runs only after the user has typed something and the app reruns
+# Processing Loop
 if st.session_state.messages[-1]["role"] == "user":
     user_text = st.session_state.messages[-1]["content"]
     step = st.session_state.step
     response = ""
 
-    # Lead capture & Quote flow logic
+    # (Lead/Quote logic remains same - cleaned for brevity)
     if step == "name":
-        clean_name = user_text.lower().replace("hi","").replace("hello","").replace("my name is","").replace("i am","").replace("i'm","").strip().title()
+        clean_name = user_text.lower().replace("hi","").replace("my name is","").replace("i am","").replace("i'm","").strip().title()
         st.session_state.lead_data["Name"] = clean_name
         st.session_state.step = "company"
         response = f"Nice to meet you {clean_name}! Which company are you with?"
@@ -133,7 +131,7 @@ if st.session_state.messages[-1]["role"] == "user":
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
         response = "Perfect! I've logged those details. How can I help you today?"
-    elif "quote" in user_text.lower() or "price" in user_text.lower():
+    elif any(word in user_text.lower() for word in ["quote", "price", "cost"]):
         st.session_state.step = "quote_product"
         response = "Sure thing. What product would you like quoted?"
     elif step == "quote_product":
@@ -152,20 +150,24 @@ if st.session_state.messages[-1]["role"] == "user":
         st.session_state.lead_data["Quote Budget"] = user_text
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = f"Perfect {st.session_state.lead_data['Name']}. I've captured the enquiry for your {st.session_state.lead_data['Quote Product']}. Sales will send a quote to {st.session_state.lead_data['Email']} shortly."
+        response = f"Perfect {st.session_state.lead_data['Name']}. Enquiry captured for {st.session_state.lead_data['Quote Product']}."
     else:
         context = f"Customer: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}."
         response = brain.get_answer(context + user_text, st.session_state.messages)
 
-    # Now Ruby is ready to "Talk"
     st.session_state.messages.append({"role":"assistant","content":response})
     st.session_state.avatar = "talking"
     st.rerun()
 
 # --- 7. VOICE & RESET ---
 if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
-    speak(st.session_state.messages[-1]["content"])
-    time.sleep(1.0)
+    full_text = st.session_state.messages[-1]["content"]
+    speak(full_text)
+    
+    # Calculate sleep duration: approx 0.15s per character + 1s buffer
+    # This prevents the cut-off!
+    wait_time = (len(full_text) * 0.08) + 1.5
+    time.sleep(wait_time)
+    
     st.session_state.avatar = "idle"
     st.rerun()
-
