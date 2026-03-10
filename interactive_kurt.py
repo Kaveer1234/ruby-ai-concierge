@@ -247,7 +247,13 @@ if user := st.chat_input("Talk to RUBY..."):
 
         save_to_sheets(st.session_state.lead_data)
 
-        response = "Perfect. I've passed that to our sales team and they'll prepare a formal quote for you."
+        response = f"""
+        Perfect {st.session_state.lead_data['Name']}.
+
+        I've captured the details for your {st.session_state.lead_data['Quote Product']} enquiry.
+
+        Our sales team will prepare a formal quotation and send it to {st.session_state.lead_data['Email']} shortly.
+        """
 
     # -------------------
     # Normal AI chat
@@ -277,5 +283,6 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
 
 
