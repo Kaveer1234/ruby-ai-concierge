@@ -65,7 +65,7 @@ RULES:
             completion = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=0.7,
+                temperature=0.8,
                 max_tokens=200
             )
 
@@ -73,5 +73,6 @@ RULES:
 
         except Exception as e:
             return f"Ruby is having a small technical hiccup: {str(e)}"
+
 
 
