@@ -28,15 +28,25 @@ if "video_idle" not in st.session_state:
 if "avatar" not in st.session_state:
     st.session_state.avatar = "idle" # Start as idle
 
-# --- 3. THE PICKER (Decides which video to show) ---
-current_video_hex = st.session_state.video_talking if st.session_state.avatar == "talking" else st.session_state.video_idle
+# --- 3. THE PICKER ---
+# Use .get to safely pull the video from memory
+if st.session_state.avatar == "talking":
+    current_video_hex = st.session_state.get("video_talking", "")
+else:
+    current_video_hex = st.session_state.get("video_idle", "")
 
-# --- 4. THE UI LAYOUT (The Fixed Header) ---
+# --- 4. THE UI LAYOUT ---
+# We define the video tag separately so it's cleaner to insert
+video_html = f"""
+    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
+        <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
+    </video>
+""" if current_video_hex else ""
+
 st.markdown(f"""
 <style>
 header, [data-testid="stHeader"], footer {{display:none}}
 .main .block-container {{padding:0; max-width:100%}}
-
 .ruby-fixed-header {{
     position:fixed;
     top:0; left:0; width:100%;
@@ -47,7 +57,6 @@ header, [data-testid="stHeader"], footer {{display:none}}
     border-bottom:3px solid #f0f2f6;
     padding-top:10px;
 }}
-
 .chat-scroll-zone {{
     margin-top:408px;
     height:calc(100vh - 520px);
@@ -55,13 +64,11 @@ header, [data-testid="stHeader"], footer {{display:none}}
     padding:0 15% 100px 15%;
     display:flex; flex-direction:column;
 }}
-
 div[data-testid="stChatInput"] {{
     position:fixed;
     bottom:20px;
     z-index:10000;
 }}
-
 video {{ border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); }}
 </style>
 
@@ -69,10 +76,7 @@ video {{ border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.15); }}
     <div style="font-weight:700;font-size:1.1rem;margin-bottom:10px;">
     RUBY – Associated Industries 2027
     </div>
-
-    <video width="480" autoplay loop muted playsinline key="{st.session_state.avatar}">
-        <source src="data:video/mp4;base64,{current_video_hex}" type="video/mp4">
-    </video>
+    {video_html}
 </div>
 """, unsafe_allow_html=True)
 
@@ -162,9 +166,14 @@ st.markdown('</div>', unsafe_allow_html=True)
 if user := st.chat_input("Talk to RUBY..."):
     st.session_state.messages.append({"role":"user","content":user})
     
-    # --- TRIGGER THE TALKING VIDEO ---
-    st.session_state.avatar = "talking" 
-    st.rerun() # This reloads the page so the video starts talking while the AI thinks
+    # 1. Switch to THINKING video immediately
+    st.session_state.avatar = "thinking" 
+    
+    # 2. Add the thinking hex to your initialization at the top if you haven't yet
+    if "video_thinking" not in st.session_state:
+        st.session_state.video_thinking = get_video_base64("kurt_thinking.mp4")
+
+    st.rerun()
     # -------------------
     # Lead capture
     # -------------------
@@ -280,6 +289,7 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
 
 
 
