@@ -247,7 +247,10 @@ if user := st.chat_input("Talk to RUBY..."):
 
     else:
 
-        context = f"User: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}."
+        context = f"""
+        Customer name: {st.session_state.lead_data['Name']}
+        Company: {st.session_state.lead_data['Company']}
+        """
 
         response = brain.get_answer(context + user, st.session_state.messages)
 
@@ -266,3 +269,4 @@ if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.ava
 
     st.session_state.avatar="kurt_idle.mp4"
     st.rerun()
+
