@@ -1,3 +1,5 @@
+import streamlit as st
+import requests
 import base64
 from datetime import datetime
 from gtts import gTTS
@@ -28,16 +30,16 @@ if "step" not in st.session_state:
     st.session_state.avatar = "idle" 
     st.session_state.lead_data = {
         "Name":"", "Company":"", "Phone":"", "Email":"",
-        "Quote Product":"", "Quote Quantity":"", "Quote Colours":"", "Quote Budget":""
+        "Quote_Product":"", "Quote_Quantity":"", "Quote_Colours":"", "Quote_Budget":""
     }
 
-# Ensure videos are pre-loaded
+# Pre-load all videos
 if "video_idle" not in st.session_state:
     st.session_state.video_idle = get_video_base64("kurt_idle.mp4")
     st.session_state.video_talking = get_video_base64("kurt_talking.mp4")
     st.session_state.video_thinking = get_video_base64("kurt_thinking.mp4")
 
-# --- 3. UI LAYOUT & FIXED HEADER ---
+# --- 3. UI LAYOUT ---
 if st.session_state.avatar == "talking":
     current_video_hex = st.session_state.video_talking
 elif st.session_state.avatar == "thinking":
@@ -45,7 +47,7 @@ elif st.session_state.avatar == "thinking":
 else:
     current_video_hex = st.session_state.video_idle
 
-# We add a timestamp to the key to FORCE the browser to refresh the video element
+# Added timestamp to force refresh
 video_key = f"{st.session_state.avatar}_{int(time.time())}"
 
 st.markdown(f"""
@@ -106,15 +108,14 @@ if user := st.chat_input("Talk to RUBY..."):
     st.session_state.avatar = "thinking"
     st.rerun()
 
-# Processing Loop
 if st.session_state.messages[-1]["role"] == "user":
     user_text = st.session_state.messages[-1]["content"]
     step = st.session_state.step
     response = ""
 
-    # (Lead/Quote logic remains same - cleaned for brevity)
+    # Lead capture with improved name cleaning (No more "Hi Chris" as a name)
     if step == "name":
-        clean_name = user_text.lower().replace("hi","").replace("my name is","").replace("i am","").replace("i'm","").strip().title()
+        clean_name = user_text.lower().replace("hi","").replace("hello","").replace("my name is","").replace("i am","").replace("i'm","").strip().title()
         st.session_state.lead_data["Name"] = clean_name
         st.session_state.step = "company"
         response = f"Nice to meet you {clean_name}! Which company are you with?"
@@ -135,22 +136,22 @@ if st.session_state.messages[-1]["role"] == "user":
         st.session_state.step = "quote_product"
         response = "Sure thing. What product would you like quoted?"
     elif step == "quote_product":
-        st.session_state.lead_data["Quote Product"] = user_text
+        st.session_state.lead_data["Quote_Product"] = user_text
         st.session_state.step = "quote_quantity"
         response = "Great. Roughly how many units are you looking for?"
     elif step == "quote_quantity":
-        st.session_state.lead_data["Quote Quantity"] = user_text
+        st.session_state.lead_data["Quote_Quantity"] = user_text
         st.session_state.step = "quote_colours"
         response = "Do you know how many overprint colours you'd like?"
     elif step == "quote_colours":
-        st.session_state.lead_data["Quote Colours"] = user_text
+        st.session_state.lead_data["Quote_Colours"] = user_text
         st.session_state.step = "quote_budget"
         response = "If you have a rough budget in mind you're welcome to share it."
     elif step == "quote_budget":
-        st.session_state.lead_data["Quote Budget"] = user_text
+        st.session_state.lead_data["Quote_Budget"] = user_text
         st.session_state.step = "chat"
         save_to_sheets(st.session_state.lead_data)
-        response = f"Perfect {st.session_state.lead_data['Name']}. Enquiry captured for {st.session_state.lead_data['Quote Product']}."
+        response = f"Perfect {st.session_state.lead_data['Name']}. I've captured those specs for you."
     else:
         context = f"Customer: {st.session_state.lead_data['Name']} from {st.session_state.lead_data['Company']}."
         response = brain.get_answer(context + user_text, st.session_state.messages)
@@ -163,11 +164,8 @@ if st.session_state.messages[-1]["role"] == "user":
 if st.session_state.messages[-1]["role"] == "assistant" and st.session_state.avatar == "talking":
     full_text = st.session_state.messages[-1]["content"]
     speak(full_text)
-    
-    # Calculate sleep duration: approx 0.15s per character + 1s buffer
-    # This prevents the cut-off!
+    # Dynamic wait time based on text length to prevent cut-off
     wait_time = (len(full_text) * 0.08) + 1.5
     time.sleep(wait_time)
-    
     st.session_state.avatar = "idle"
     st.rerun()
