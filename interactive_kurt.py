@@ -87,11 +87,18 @@ def speak(text):
     try:
         tts = gTTS(text=text, lang="en", tld="co.za")
         tts.save("voice.mp3")
-        with open("voice.mp3","rb") as f:
+        file_size = os.path.getsize("voice.mp3")
+        
+        with open("voice.mp3", "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
+            
+        # Inject the audio player directly from here
         st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay></audio>', unsafe_allow_html=True)
+        
         os.remove("voice.mp3")
-    except: pass
+        return file_size 
+    except: 
+        return 0
 
 brain = CompanyBrain()
 
@@ -168,23 +175,19 @@ if st.session_state.messages[-1]["role"] == "user":
 
 # --- 7. VOICE & RESET ---
 # This checks if the LAST message is from the assistant and hasn't been "spoken" yet
-if "last_spoken" not in st.session_state:
-    st.session_state.last_spoken = None
-
 if st.session_state.messages[-1]["role"] == "assistant":
-    current_content = st.session_state.messages[-1]["content"]
+    last_msg = st.session_state.messages[-1]
     
-    # Only speak if this is a new message we haven't processed yet
-    if current_content != st.session_state.last_spoken:
+    if last_msg["content"] != st.session_state.get("last_spoken", ""):
         st.session_state.avatar = "talking"
-        st.session_state.last_spoken = current_content
+        st.session_state.last_spoken = last_msg["content"]
         
-        # Trigger audio
-        speak(current_content)
+        # Trigger the function, which now handles both playing AND returning the size
+        size = speak(last_msg["content"])
         
-        # Calculate dynamic wait based on content length
-        wait_time = max(2.0, (len(current_content) / 10.0) + 1.0)
-        time.sleep(wait_time)
+        # Calculate duration
+        duration = (size / 2000) + 1.0 
         
+        time.sleep(duration)
         st.session_state.avatar = "idle"
         st.rerun()
